@@ -8,7 +8,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/login',
-  passport.authenticate('spotify'),
+  passport.authenticate('spotify', {scope: ['user-top-read', 'playlist-read-private', 'user-follow-read', 'user-library-read', 'user-read-email']}),
   function(req, res){
     // The request will be redirected to spotify for authentication, so this
     // function will not be called.
@@ -25,5 +25,10 @@ router.get('/callback',
     // Successful authentication, redirect home.
     res.redirect('/');
   });
+
+router.get('/logout', function(req, res) {
+  req.logout();
+  res.redirect('/');
+});
 
 module.exports = router;
