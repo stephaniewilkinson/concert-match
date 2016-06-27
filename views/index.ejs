@@ -17,8 +17,6 @@
 
       <% if (user) { %>
         <% if (user.photo)  %>
-        <img src="<%= user.photo %>" alt="">
-        <%= user.photo  %>
         <%= user  %>
         Hello <%= user.name %> <br>
         <a href="/logout">Logout</a>
