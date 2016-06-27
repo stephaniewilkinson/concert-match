@@ -16,8 +16,9 @@
       <h1>Concert Match</h1>
 
       <% if (user) { %>
+        <% if (user.photo)  %>
         <img src="<%= user.photo  %>" alt="">
-        <%= user.photo  %>
+        <% else  %>
         <%= user  %>
         Hello <%= user.name %> <br>
         <a href="/logout">Logout</a>
