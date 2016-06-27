@@ -12,9 +12,11 @@ passport.use(new SpotifyStrategy({
     User.findOne({ providerId: profile.id }, function (err, user) {
             if (err)  { return done(err) };
       if (user) { return done(null, user) };
+      // console.log(profile.images.0.url)
       var newUser = new User({
         name: profile.displayName,
-        providerId: profile.id
+        providerId: profile.id,
+        images: profile.photos[0]
       });
       newUser.save(function(err) {
         if (err) { return done(err) };
