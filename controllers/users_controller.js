@@ -1,5 +1,6 @@
 var User = require("../models/user");
 
+
 var index = function(req, res, next){
   User.find({}, function(err, users) {
     if (err) {
