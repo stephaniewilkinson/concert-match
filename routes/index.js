@@ -14,11 +14,6 @@ router.get('/login',
     // function will not be called.
   });
 
-router.get('/logout', function(req, res) {
-  req.logout();
-  res.redirect('/');
-})
-
 router.get('/callback',
   passport.authenticate('spotify', { failureRedirect: '/' }),
   function(req, res) {
@@ -30,5 +25,6 @@ router.get('/logout', function(req, res) {
   req.logout();
   res.redirect('/');
 });
+
 
 module.exports = router;
