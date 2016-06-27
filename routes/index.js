@@ -14,8 +14,13 @@ router.get('/login',
     // function will not be called.
   });
 
+router.get('/logout', function(req, res) {
+  req.logout();
+  res.redirect('/');
+})
+
 router.get('/callback',
-  passport.authenticate('spotify', { failureRedirect: '/login' }),
+  passport.authenticate('spotify', { failureRedirect: '/' }),
   function(req, res) {
     // Successful authentication, redirect home.
     res.redirect('/');
