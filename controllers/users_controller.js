@@ -7,16 +7,14 @@ function index(req, res, next){
     res.render('index', { user: req.user });
   } else if (req.user) {
     var options = {
-      url: 'https://api.spotify.com/v1/me/top/artists?limit=5',
+      url: 'https://api.spotify.com/v1/me/top/artists?limit=20',
       headers: {
         'Authorization': 'Bearer ' + req.user.accessToken
         }
       };
       request.get(options, function(err, resp, body) {
-        parseArtists(body);
+        var artists = artistData(JSON.parse(body).items);
         console.log("artists:", artists);
-        // this works
-        console.log(artists);
         res.render('index', { user: req.user, artists: artists });
       });
   } else {
@@ -24,11 +22,14 @@ function index(req, res, next){
   }
 };
 
-parseArtists = function(x){
-  artists = JSON.parse(x).items;
-  //works
-  // console.log(artists);
-};
+function artistData(artists) {
+  return artists.map(function(artist) {
+    return {
+      name: artist.name,
+      image: artist.images[0].url
+    }
+  });
+}
 
 module.exports = {
   index:  index
