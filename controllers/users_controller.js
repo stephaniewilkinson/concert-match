@@ -7,7 +7,7 @@ function index(req, res, next){
     res.render('index', { user: req.user });
   } else if (req.user) {
     var options = {
-      url: 'https://api.spotify.com/v1/me/top/artists?limit=20',
+      url: 'https://api.spotify.com/v1/me/top/artists?limit=100',
       headers: {
         'Authorization': 'Bearer ' + req.user.accessToken
         }
@@ -34,3 +34,13 @@ function artistData(artists) {
 module.exports = {
   index:  index
 };
+
+
+
+// http://api.bandsintown.com/artists/lustforyouth/events.json?api_version=2.0&app_id=concertmatch
+
+// function findEvents(artists) {
+//   artists.forEach(artist) {
+//     return artist.name
+//   }
+// }
