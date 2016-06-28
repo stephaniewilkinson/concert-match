@@ -1,19 +1,13 @@
 var User = require("../models/user");
-// var passport = require('../config/passport');
 var request = require('request');
 
 function cb(err, res, body) {
-  // console.log(res);
-  // console.log(err);
-  // console.log(body);
-
   if (!err && res.statusCode == 200) {
     // console.log(e);
     var artists = JSON.parse(body);
     var artistNames = [];
+    artists.items.forEach(artist => artistNames.push(artist.name));
     console.log(artists);
-    // artists.forEach(artist => artistNames.push(artist.name));
-    // console.log(artists);
   }
 }
 
