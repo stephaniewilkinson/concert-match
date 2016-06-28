@@ -18,9 +18,10 @@ function index(req, res, next){
           request.get(url, function(err, response, body) {
             var venues = JSON.parse(body);
             if (venues.length >= 1) {
+              artist.concerts = [];
               venues.forEach(venue => artist.concerts.push(venue));
             };
-            // console.log(artists);
+            console.log(artists);
           });
         });
 
@@ -40,8 +41,7 @@ function artistData(artists) {
   return artists.map(function(artist) {
     return {
       name: artist.name,
-      image: artist.images[0].url,
-      concerts: []
+      image: artist.images[0].url
     }
   });
 }
