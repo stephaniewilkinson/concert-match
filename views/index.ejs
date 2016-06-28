@@ -4,6 +4,8 @@
     <title>Concert Match</title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
     <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.1/mapbox-gl.css' rel='stylesheet' />
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <!-- Compiled and minified JavaScript -->
@@ -12,13 +14,14 @@
   </head>
   <body>
     <% include ./partials/_nav %>
+    <% include ./partials/_map %>
     <div class="container">
-
+<div id="map"></div>
       <% if (user) { %>
          <% artists.forEach(function(el, i, arr){ %>
 
       <div class="row">
-        <div class="col s12 m7">
+        <div class="col s6 l6 offset-l6">
           <div class="card">
             <div class="card-image">
               <img src="<%=   el.image; %>">
