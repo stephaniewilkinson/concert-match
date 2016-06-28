@@ -6,13 +6,22 @@ function index(req, res, next){
   if (req.user) {
     var options = {
       url: 'https://api.spotify.com/v1/me/top/artists?limit=100',
-      headers: {
-        'Authorization': 'Bearer ' + req.user.accessToken
-        }
+      headers: {'Authorization': 'Bearer ' + req.user.accessToken}
       };
+      // get artists array and map into array of objects with just name and image url
       request.get(options, function(err, resp, body) {
         var artists = artistData(JSON.parse(body).items);
         console.log("artists:", artists);
+        // for each artist, send api request to bandsintown to find concert/venue data
+        artists.forEach(function(artist) {
+          var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
+          var url = `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
+          request.get(url, function(err, response, body) {
+            var venues = JSON.parse(body);
+            console.log(venues);
+          });
+        });
+
         res.render('index', { user: req.user, artists: artists });
       });
   } else {
@@ -35,10 +44,17 @@ module.exports = {
 
 
 
-// http://api.bandsintown.com/artists/lustforyouth/events.json?api_version=2.0&app_id=concertmatch
+// 'http://api.bandsintown.com/artists/lustforyouth/events.json?api_version=2.0&app_id=concertmatch'
 
-// function findEvents(artists) {
-//   artists.forEach(artist) {
-//     return artist.name
-//   }
-// }
+// for each artist
+// send request.get
+// remove spaces, convert & to 'and'
+
+// artists.forEach(function(artist) {
+//   var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
+//   var url = `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
+//   request.get(url, function(err, response, body) {
+//     var venues = JSON.parse(body);
+//     console.log(venues);
+//   });
+// });
