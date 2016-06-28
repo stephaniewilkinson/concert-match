@@ -1,11 +1,11 @@
-<% if (user) {  %>
+<% if (user.photo) {  %>
   <nav class="teal" role="navigation">
     <div class="nav-wrapper container">
       <a id="logo-container" href="#" class="brand-logo">
       <img height="40" vspace="12" src="../images/wordmark.png" alt="">
       </a>
       <ul class="right hide-on-med-and-down">
-        <li><a href="#">Welcome back <%= user.name ? user.name : user.profileId %></a></li>
+        <li><img height="40" vspace="12" src="<%= user.photo %>" alt=""></li>
       </ul>
       <ul id="nav-mobile" class="side-nav">
         <li><a href="#">Welcome Back <%= user.name %></a></li>
@@ -19,7 +19,7 @@
   <nav class="teal" role="navigation">
     <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Logo</a>
       <ul class="right hide-on-med-and-down">
-        <li><a href="#">Hi, new user</a></li>
+        <li><a href="#">Welcome back <%= user.name ? user.name : user.profileId %></a></li>
       </ul>
       <ul id="nav-mobile" class="side-nav">
         <li><a href="#">Hi, new user</a></li>
