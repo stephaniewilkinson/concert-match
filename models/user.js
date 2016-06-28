@@ -5,6 +5,7 @@ var userSchema = new mongoose.Schema({
   email: String,
   providerId: String,
   photo: String,
+  accessToken: String,
   created: {type: Date, default: Date.now}
 });
 
