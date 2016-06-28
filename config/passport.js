@@ -14,8 +14,11 @@ passport.use(new SpotifyStrategy({
       if (user) {
         user.accessToken = accessToken;
         console.log(user.accessToken)
-
-        return done(null, user) };
+        user.save(function(err, user) {
+          if (err) {return done(err)}
+          return done(null, user) ;
+        });
+      }
       // console.log(profile.images.0.url)
       var newUser = new User({
         name: profile.displayName,
