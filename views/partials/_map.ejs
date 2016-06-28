@@ -1,6 +1,6 @@
     <style>
         body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
+        #map { position:fixed; top:0; bottom:0; width:100%; }
     </style>
 </head>
 <body>
@@ -10,8 +10,11 @@
 mapboxgl.accessToken = 'pk.eyJ1Ijoic3RlcGhhbmllYmV0YW5jb3VydCIsImEiOiJjaXB6eWl0ZXgweWpkZnVtMnJvMWMwaXQ0In0.BRjEa1VSzIm-bNQwMlrfcA';
 var map = new mapboxgl.Map({
     container: 'map', // container id
-    style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
+    style: 'mapbox://styles/mapbox/bright-v9', //stylesheet location
     center: [-74.50, 40], // starting position
     zoom: 9 // starting zoom
 });
+map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
+map.touchZoomRotate.enable();
+
 </script>
