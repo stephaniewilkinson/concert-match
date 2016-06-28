@@ -12,12 +12,15 @@ passport.use(new SpotifyStrategy({
     User.findOne({ providerId: profile.id }, function (err, user) {
       if (err)  { return done(err) };
       if (user) {
-        user.accessToken = accessToken;
-        console.log(user.accessToken)
-        user.save(function(err, user) {
-          if (err) {return done(err)}
-          return done(null, user) ;
-        });
+        if (user.accessToken != accessToken) {
+          user.accessToken = accessToken;
+          user.save(function(err, user) {
+            if (err) {return done(err)}
+            return done(null, user);
+          });
+        } else {
+          return done(null, user);
+        }
       }
       // console.log(profile.images.0.url)
       var newUser = new User({
@@ -36,12 +39,12 @@ passport.use(new SpotifyStrategy({
 
 
 passport.serializeUser(function(user, done) {
-  done(null, user.id);
+  return done(null, user.id);
 });
 
 passport.deserializeUser(function(id, done) {
   User.findById(id, function(err, user) {
-    done(err, user);
+    return done(err, user);
   });
 });
 
