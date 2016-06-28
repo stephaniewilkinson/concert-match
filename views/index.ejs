@@ -13,10 +13,33 @@
   <body>
     <% include ./partials/_nav %>
     <div class="container">
+    <h1>User object</h1>
       <% if (user) { %>
         <%= user  %>
-        <%= artists %>
-        Hello <%= user.name %> <br>
+      <h1>Artists Object</h1>
+         <% artists.forEach(function(el, i, arr){ %>
+         <li><%=   el.name; %></li>
+
+      <div class="row">
+        <div class="col s12 m7">
+          <div class="card">
+            <div class="card-image">
+              <img src="images/sample-1.jpg">
+              <span class="card-title">Card Title</span>
+            </div>
+            <div class="card-content">
+              <p>I am a very simple card. I am good at containing small bits of information.
+              I am convenient because I require little markup to use effectively.</p>
+            </div>
+            <div class="card-action">
+              <a href="#">This is a link</a>
+            </div>
+          </div>
+        </div>
+      </div>
+<% }); %>
+
+
         <a href="/logout">Logout</a>
       <% } else { %>
         <a href="/auth/spotify">Login</a>
