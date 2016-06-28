@@ -8,13 +8,15 @@
 <div id='map'></div>
 <script>
 mapboxgl.accessToken = 'pk.eyJ1Ijoic3RlcGhhbmllYmV0YW5jb3VydCIsImEiOiJjaXB6eWl0ZXgweWpkZnVtMnJvMWMwaXQ0In0.BRjEa1VSzIm-bNQwMlrfcA';
-var map = new mapboxgl.Map({
+
+function drawMap(coords){
+  new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/mapbox/bright-v9', //stylesheet location
-    center: [-74.50, 40], // starting position
+    center: [coords.lat, coords.lng], // starting position
     zoom: 9 // starting zoom
-});
-map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
-map.touchZoomRotate.enable();
-
+  });
+  map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
+  map.touchZoomRotate.enable();
+}
 </script>
