@@ -3,9 +3,7 @@ var request = require('request');
 var artists;
 
 function index(req, res, next){
-  if (req.user & req.session.spotifyData) {
-    res.render('index', { user: req.user });
-  } else if (req.user) {
+  if (req.user) {
     var options = {
       url: 'https://api.spotify.com/v1/me/top/artists?limit=100',
       headers: {
