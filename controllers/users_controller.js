@@ -41,8 +41,17 @@ function artistData(artists) {
   });
 }
 
+function update(req, res, next) {
+  if (req.body.name)  req.user.name = req.body.name;
+  if (req.body.photo) req.user.photo = req.body.photo;
+  req.user.save(function(err, user) {
+    res.json(req.user);
+  });
+}
+
 module.exports = {
-  index:  index
+  index  :  index,
+  update :  update
 };
 
 

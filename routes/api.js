@@ -1,6 +1,7 @@
 var express = require('express');
 var passport = require('passport');
 var router = express.Router();
+var usersController = require('../controllers/users_controller');
 
 router.post('/location', function(req, res) {
   req.session.location = {
@@ -12,5 +13,8 @@ router.post('/location', function(req, res) {
     lng: req.body.lng
   });
 });
+
+router.put('/update-profile', usersController.update);
+
 
 module.exports = router;
