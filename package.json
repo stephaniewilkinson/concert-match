@@ -21,6 +21,7 @@
     "passport": "^0.3.2",
     "passport-spotify": "^0.3.0",
     "request": "^2.72.0",
+    "rollbar": "^0.6.2",
     "serve-favicon": "~2.3.0"
   }
 }
