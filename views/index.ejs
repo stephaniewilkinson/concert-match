@@ -24,17 +24,20 @@
             <div class="card-image">
               <img src="<%=   el.image; %>">
               <span class="card-title"><%=i+1 + ". "%><%=   el.name; %></span>
+                <div class="card-content">
+                <% if (el.concerts) { %>
+                  <p>
+                    <% el.concerts.forEach(function(concert, i, arr){ %>
+                      <%= JSON.stringify(concert) %>
+                    <% });  %>
+                  </p>
+                  <% }  %>
+                </div>
             </div>
-
           </div>
         </div>
       </div>
-<% }); %>
-
-
-
-        <%= artists %>
-
+    <% }); %>
         <a href="/logout">Logout</a>
       <% } else { %>
         <a href="/auth/spotify">Login</a>
@@ -63,17 +66,9 @@
 
 
   <script>
-    var lat, lng;
-    navigator.geolocation.getCurrentPosition(function(pos){
-      lat = pos.coords.latitude;
-      lng = pos.coords.longitude;
-      $.post('/api/location', {
-        lat: lat,
-        lng: lng
-      }).then(function(coords) {
-        // center map based on lat, lng
-        drawMap(coords);
-      });
+    drawMap({
+      lat:<%= coords.lat %>,
+      lng:<%= coords.lng %>
     });
 
 
@@ -94,6 +89,14 @@
 $(document).ready(function() {
   $('.modal-trigger').leanModal();
 });
+
+  // <% artists.forEach(function(artist){ %>
+  //   <% if (artist.concerts) { %>
+  //     <% artist.concerts.forEach(function(concert){  %>
+  //        L.marker([<%= concert.venue.latitude %>, <%= concert.venue.longitude %>]).addTo(mapLeaflet);
+  //     <% });  %>
+  //   <% }  %>
+  // <% });  %>
 
   </script>
 

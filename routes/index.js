@@ -4,7 +4,9 @@ var router = express.Router();
 var usersController = require('../controllers/users_controller');
 
 /* GET home page. */
-router.get('/', usersController.index);
+router.get('/', usersController.splash);
+router.get('/home', usersController.index);
+
 
 router.get('/login', function(req, res, next){
   res.render('login');
@@ -21,7 +23,7 @@ router.get('/callback',
   passport.authenticate('spotify', { failureRedirect: '/' }),
   function(req, res) {
     // Successful authentication, redirect home.
-    res.redirect('/');
+    res.redirect('/home');
   });
 
 router.get('/logout', function(req, res) {

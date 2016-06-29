@@ -11,13 +11,6 @@ var rollbar = require('rollbar');
 var routes = require('./routes/index');
 var api = require('./routes/api');
 
-
-
-
-
-
-
-
 var app = express();
 
 // view engine setup

@@ -1,7 +1,7 @@
-    <style>
-        body { margin:0; padding:0; }
-        #map { position:fixed; top:0; bottom:0; width:100%; }
-    </style>
+<style>
+    body { margin:0; padding:0; }
+    #map { position:fixed; top:0; bottom:0; width:100%; }
+</style>
 </head>
 <body>
 
@@ -9,8 +9,10 @@
 <script>
 mapboxgl.accessToken = 'pk.eyJ1Ijoic3RlcGhhbmllYmV0YW5jb3VydCIsImEiOiJjaXB6eWl0ZXgweWpkZnVtMnJvMWMwaXQ0In0.BRjEa1VSzIm-bNQwMlrfcA';
 
+var mapLeaflet;
+
 function drawMap(coords){
-  new mapboxgl.Map({
+  mapLeaflet = new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/mapbox/outdoors-v9', //stylesheet location
     center: [parseFloat(coords.lng), parseFloat(coords.lat)], // starting position

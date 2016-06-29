@@ -1,31 +1,40 @@
 var User = require("../models/user");
 var request = require('request');
 
+function splash(req, res, next){
+  res.render('splash');
+};
+
 function index(req, res, next){
   if (req.user) {
     var options = {
       url: 'https://api.spotify.com/v1/me/top/artists?limit=50',
       headers: {'Authorization': 'Bearer ' + req.user.accessToken}
-      };
-      // get artists array and map into array of objects with just name and image url
-      request.get(options, function(err, resp, body) {
-        var artists = artistData(JSON.parse(body).items);
-        // for each artist, send api request to bandsintown to find concert/venue data
-        artists.forEach(function(artist) {
-          var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
-          var url = `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`;
-          // `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch`
-          request.get(url, function(err, response, body) {
-            var venues = JSON.parse(body);
-            if (venues.length >= 1) {
-              artist.concerts = [];
-              venues.forEach(venue => artist.concerts.push(venue));
-              console.log(artist);
-            };
-          });
-        });
-        res.render('index', { user: req.user, artists: artists });
+    };
+    // get artists array and map into array of objects with just name and image url
+    request.get(options, function(err, resp, body) {
+      var venuePromises = [];
+      var artists = artistData(JSON.parse(body).items);
+      artists.forEach(function(artist) {
+        var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
+        var url = `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`;
+        venuePromises.push(
+          new Promise(function(resolve, reject){
+            request.get(url, function(err, response, body) {
+              var venues = JSON.parse(body);
+              if (venues.length >= 1) {
+                artist.concerts = [];
+                venues.forEach(venue => artist.concerts.push(venue));
+              }
+              resolve(true);
+            });
+          })
+        );
       });
+      Promise.all(venuePromises).then(function(){
+        res.render('index', { user: req.user, artists: artists, coords: req.session.location });
+      });
+    });
   } else {
     res.redirect('/login');
   }
@@ -51,7 +60,8 @@ function update(req, res, next) {
 
 module.exports = {
   index  :  index,
-  update :  update
+  update :  update,
+  splash :  splash
 };
 
 
