@@ -56,9 +56,9 @@
       $.post('/api/location', {
         lat: lat,
         lng: lng
-      }).then(function(coords) {
+      }).then(function(data) {
         // center map based on lat, lng
-        drawMap(coords);
+        console.log(data);
       });
     });
   </script>

@@ -13,7 +13,7 @@ function drawMap(coords){
   new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/mapbox/bright-v9', //stylesheet location
-    center: [coords.lat, coords.lng], // starting position
+    center: [parseFloat(coords.lng)+1, parseFloat(coords.lat)], // starting position
     zoom: 9 // starting zoom
   });
   map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
