@@ -5,16 +5,16 @@
 </head>
 <body>
 
-<div id='map'></div>
+<!-- <div id='map'></div> -->
 <script>
 mapboxgl.accessToken = 'pk.eyJ1Ijoic3RlcGhhbmllYmV0YW5jb3VydCIsImEiOiJjaXB6eWl0ZXgweWpkZnVtMnJvMWMwaXQ0In0.BRjEa1VSzIm-bNQwMlrfcA';
 
 function drawMap(coords){
   new mapboxgl.Map({
     container: 'map', // container id
-    style: 'mapbox://styles/mapbox/bright-v9', //stylesheet location
+    style: 'mapbox://styles/mapbox/outdoors-v9', //stylesheet location
     center: [parseFloat(coords.lng), parseFloat(coords.lat)], // starting position
-    zoom: 9 // starting zoom
+    zoom: 12 // starting zoom
   });
   map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
   map.touchZoomRotate.enable();
