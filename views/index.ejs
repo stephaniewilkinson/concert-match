@@ -45,12 +45,18 @@
   <div id="modal1" class="modal">
     <div class="modal-content">
       <h4>Edit Profile</h4>
+      <div>
+        <label for="<%= user.name %>">Name</label>
         <input placeholder="<%= user.name %>"=type="text" id="username">
-        <input placeholder="<%= user.photo %>type="text" id="userphoto">
+        </div>
+        <div>
+        <label for="<%= user.photo %>">Profile Photo URL</label>
 
+        <input placeholder="<%= user.photo %>"type="text" id="userphoto">
+      </div>
     </div>
     <div class="modal-footer">
-      <a id="submit-profile" "href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Agree</a>
+      <a id="submit-profile" "href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Submit changes</a>
     </div>
   </div>
 
