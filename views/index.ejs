@@ -23,15 +23,17 @@
             <div class="card-image">
               <img src="<%=   el.image; %>">
               <span class="card-title"><%=i+1 + ". "%><%=   el.name; %></span>
-                <div class="card-content">
+              </div>
+              <div>
                 <% if (el.concerts) { %>
+                <div class="card-content">
                   <p>
                     <% el.concerts.forEach(function(concert, i, arr){ %>
-                      <%= JSON.stringify(concert) %>
+                      <%= JSON.stringify(concert.venue) %>
                     <% });  %>
                   </p>
-                  <% }  %>
                 </div>
+                  <% }  %>
             </div>
           </div>
         </div>
