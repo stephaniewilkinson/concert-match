@@ -51,9 +51,8 @@ app.use(function(req, res, next) {
 
 // error handlers
 // Use the rollbar error handler to send exceptions to your rollbar account
-app.use(rollbar.errorHandler('aa5781e25c4e43c9b7ad3735ddf760f7'));
-
-app.listen(6943);
+// app.use(rollbar.errorHandler('aa5781e25c4e43c9b7ad3735ddf760f7'));
+// app.listen(6943);
 
 // development error handler
 // will print stacktrace
