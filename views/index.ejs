@@ -3,12 +3,11 @@
   <head>
     <title>Concert Match</title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
+    <script src="https://code.jquery.com/jquery-3.0.0.js" integrity="sha256-jrPLZ+8vDxt2FnE1zvZXCkCcebI/C8Dt5xyaQBjxQIo=" crossorigin="anonymous"></script>
     <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.1/mapbox-gl.css' rel='stylesheet' />
-    <script src="https://code.jquery.com/jquery-3.0.0.js" integrity="sha256-jrPLZ+8vDxt2FnE1zvZXCkCcebI/C8Dt5xyaQBjxQIo=" crossorigin="anonymous"></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.1/mapbox-gl.js'></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
   </head>
   <body>
     <% include ./partials/_nav %>
@@ -71,7 +70,6 @@
       lng:<%= coords.lng %>
     });
 
-
     $('#submit-profile').on('click', function(evt) {
       $.ajax({
         url: '/api/update-profile',
@@ -90,13 +88,6 @@ $(document).ready(function() {
   $('.modal-trigger').leanModal();
 });
 
-  // <% artists.forEach(function(artist){ %>
-  //   <% if (artist.concerts) { %>
-  //     <% artist.concerts.forEach(function(concert){  %>
-  //        L.marker([<%= concert.venue.latitude %>, <%= concert.venue.longitude %>]).addTo(mapLeaflet);
-  //     <% });  %>
-  //   <% }  %>
-  // <% });  %>
 
   </script>
 
