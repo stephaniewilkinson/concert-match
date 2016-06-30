@@ -22,10 +22,11 @@ function index(req, res, next){
         var userLng = -122.6765;
       };
       artists.forEach(function(artist) {
-        var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
-        var url =  `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
+        // remove special characters
+        var artistName = artist.name.replace(/&/g,'and').split(' ').join('%20');
+        // var url =  `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
         //this url isn't properly formatted, i don't think (these values exist at this point)
-        // var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch`;
+        var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat.toString()},${userLng.toString()}&radius=50`;
         venuePromises.push(
           new Promise(function(resolve, reject){
             console.log('pre-bands request');
