@@ -11,11 +11,9 @@ function index(req, res, next){
       url: 'https://api.spotify.com/v1/me/top/artists?limit=10',
       headers: {'Authorization': 'Bearer ' + req.user.accessToken}
     };
-    // get artists array and map into array of objects with just name and image url
     request.get(options, function(err, resp, body) {
       var venuePromises = [];
       var artists = artistData(JSON.parse(body).items);
-      console.log(req.session.location);
       if (req.session.location) {
         var userLat = req.session.location.lat;
         var userLng = req.session.location.lng;
@@ -26,25 +24,24 @@ function index(req, res, next){
       artists.forEach(function(artist) {
         var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
         var url =  `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
+        //this url isn't properly formatted, i don't think (these values exist at this point)
         // var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch`;
         venuePromises.push(
           new Promise(function(resolve, reject){
-            request.get(url, function(err, response, body) {
-              // console.log(body);
-              var venues = JSON.parse(body);
+            console.log('pre-bands request');
+            request.get(url, function(errorx, responsex, bodyx) {
+              console.log('post-bands');
+              var venues = JSON.parse(bodyx);
               if (venues.length >= 1) {
                 artist.concerts = [];
                 venues.forEach(venue => artist.concerts.push(venue));
               }
-              console.log(venues);
-
               resolve(artist);
             });
           })
         );
       });
       Promise.all(venuePromises).then(function(returnedArtists){
-        // console.log(returnedArtists);
         res.render('index', { user: req.user, artists: returnedArtists, lat: userLat, lng: userLng });
       });
     });
