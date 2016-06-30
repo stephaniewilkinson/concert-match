@@ -8,7 +8,7 @@ router.get('/location', function(req, res) {
     lat: req.query.lat,
     lng: req.query.lng
   };
-  // res.redirect('/home');
+  res.redirect('/home');
 });
 
 router.put('/update-profile', usersController.update);
