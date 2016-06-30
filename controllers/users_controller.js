@@ -8,7 +8,7 @@ function splash(req, res, next){
 function index(req, res, next){
   if (req.user) {
     var options = {
-      url: 'https://api.spotify.com/v1/me/top/artists?limit=10',
+      url: 'https://api.spotify.com/v1/me/top/artists?limit=50',
       headers: {'Authorization': 'Bearer ' + req.user.accessToken}
     };
     request.get(options, function(err, resp, body) {
