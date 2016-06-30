@@ -1,46 +1,43 @@
 <!DOCTYPE html>
 <html>
   <head>
-
-  <% include ./partials/_head %>
-
+    <% include ./partials/_head %>
   </head>
   <body>
     <% include ./partials/_nav %>
     <% include ./partials/_map %>
+    <div id="map"></div>
     <div class="container">
-<div id="map"></div>
       <% if (user) { %>
          <% artists.forEach(function(el, i, arr){ %>
+            <% if (el.concerts) { %>
+              <div class="row">
+                <div class="col s6 l6">
+                  <div class="card">
+                    <div class="card-image">
+                      <img src="<%=   el.image; %>">
+                      <span class="card-title"><%=   el.name; %></span>
+                    </div>
+                    <div>
 
-      <div class="row">
-        <div class="col s6 l6">
-          <div class="card">
-            <div class="card-image">
-              <img src="<%=   el.image; %>">
-              <span class="card-title"><%=i+1 + ". "%><%=   el.name; %></span>
-              </div>
-              <div>
-                <% if (el.concerts) { %>
-                <div class="card-content">
-                  <p>
-                    <% el.concerts.forEach(function(concert, i, arr){ %>
-                      <%= JSON.stringify(concert.venue) %>
-                    <% });  %>
-                  </p>
+                      <div class="card-content">
+                        <p>
+                        <% el.concerts.forEach(function(concert, i, arr){ %>
+                        <%= JSON.stringify(concert.venue) %>
+                        <% });  %>
+                        </p>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
-                  <% }  %>
-            </div>
-          </div>
-        </div>
-      </div>
-    <% }); %>
-        <a href="/logout">Logout</a>
+              </div>
+              <% } %>
+            <% }); %>
+
       <% } else { %>
         <a href="/auth/spotify">Login</a>
       <% } %>
-
-
 
   <div id="modal1" class="modal">
     <div class="modal-content">
@@ -51,7 +48,6 @@
         </div>
         <div>
         <label for="<%= user.photo %>">Profile Photo URL</label>
-
         <input placeholder="<%= user.photo %>"type="text" id="userphoto">
       </div>
     </div>
@@ -59,8 +55,6 @@
       <a id="submit-profile" "href="#!" class=" modal-action modal-close waves-effect waves-green btn-flat">Submit changes</a>
     </div>
   </div>
-
-
 
   <script>
     drawMap({
