@@ -14,13 +14,104 @@
     <div class="container">
       <h1>loading...</h1>
     </div>
-      <script>
-        var lat, lng;
-        navigator.geolocation.getCurrentPosition(function(pos){
-          lat = pos.coords.latitude;
-          lng = pos.coords.longitude;
-          window.location = "/api/location?lat=" + lat + "&lng=" + lng;
-        });
-      </script>
+
+    <style>
+      div {
+        border: 4px solid black;
+        display: block;
+      }
+
+      div#cabinet {
+        margin: 100px auto;
+        border: 5px solid #805203;
+        background: #A86E08;
+      }
+
+      .speaker {
+        border-radius: 50%;
+        background: white;
+      }
+
+      div#cabinet .main {
+        margin: 20px auto;
+      }
+
+      div.tweeter {
+        width: 140px;
+        height: 140px;
+      }
+
+      div.woofer {
+         width: 240px;
+        height: 240px;
+      }
+
+      #cabinet {
+        border-radius: 15px;
+        width: 300px;
+        height: 450px;
+      }
+
+      .speaker.tweeter.med {
+        width: 75px;
+        height: 75px;
+        margin: 28px auto;
+      }
+
+      .speaker.tweeter.small {
+        width: 50px;
+        height: 50px;
+        margin: 8px auto;
+      }
+
+      .speaker.woofer.small {
+        width: 150px;
+        height: 150px;
+        margin: 39px auto;
+      }
+
+      .speaker {
+        animation: bump .45s ease-out infinite;
+      }
+
+      /* #cabinet {
+       animation: jump .45s ease-out infinite,
+          tilt .45s ease infinite;
+      } */
+
+      @keyframes bump {
+        27% { transform: scale(1.06); }
+      }
+
+      /* @keyframes jump {
+        25% { transform: translateY(-5%); }
+      }
+
+      @keyframes tilt {
+        52% { transform: rotate(3deg); }
+      } */
+
+
+    </style>
+
+    <div id="cabinet">
+      <div class="main speaker tweeter">
+        <div class="speaker tweeter med">
+          <div class="speaker tweeter small"></div>
+        </div>
+      </div>
+      <div class="main speaker woofer">
+        <div class="speaker woofer small"</div>
+      </div>
+    </div>
+
+    <script>
+      var lat, lng;
+      navigator.geolocation.getCurrentPosition(function(pos){
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        window.location = "/api/location?lat=" + lat + "&lng=" + lng;
+      });
+    </script>
   </body>
 </html>
