@@ -15,10 +15,22 @@ function index(req, res, next){
     request.get(options, function(err, resp, body) {
       var venuePromises = [];
       var artists = artistData(JSON.parse(body).items);
+      console.log(req.session.location);
+      if (req.session.location) {
+        var userLat = req.session.location.lat;
+        var userLng = req.session.location.lng;
+      } else {
+        var userLat = 45.5231;
+        var userLng = -122.6765;
+      };
       artists.forEach(function(artist) {
         var artistName = artist.name.replace(/&/g,'and').split(' ').join('');
-        // var url = `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`;
-        var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${req.session.location.lat},${req.session.location.lng}&radius=50`;
+        console.log(req.session.location);
+
+
+          var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat},${userLng}&radius=50`;
+
+
         venuePromises.push(
           new Promise(function(resolve, reject){
             request.get(url, function(err, response, body) {
@@ -33,9 +45,9 @@ function index(req, res, next){
         );
       });
       Promise.all(venuePromises).then(function(returnedArtists){
-        console.log("ARGS", returnedArtists);
+        // console.log("ARGS", returnedArtists);
         // console.log("LOC", req.session.location);
-        res.render('index', { user: req.user, artists: artists, coords: req.session.location });
+        res.render('index', { user: req.user, artists: artists, lat: userLat, lng: userLng });
       });
     });
   } else {

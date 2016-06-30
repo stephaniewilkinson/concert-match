@@ -18,7 +18,6 @@ function drawMap(coords){
     center: [parseFloat(coords.lng), parseFloat(coords.lat)], // starting position
     zoom: 12 // starting zoom,
   });
-  map.addControl(new mapboxgl.Navigation({position: 'top-left'})); // position is optional
-  map.touchZoomRotate.enable();
+
 }
 </script>
