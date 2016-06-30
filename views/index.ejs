@@ -4,7 +4,6 @@
     <% include ./partials/_head %>
   </head>
   <body>
-    <% include ./partials/_nav %>
     <% include ./partials/_map %>
     <div id="map"></div>
 
@@ -13,8 +12,8 @@
       <div class="loader-section section-left"></div>
       <div class="loader-section section-right"></div>
     </div>
+    <% include ./partials/_nav %>
 
-    <div class="container">
       <% if (user) { %>
          <% artists.forEach(function(el, i, arr){ %>
             <% if (el.concerts) { %>
