@@ -61,10 +61,53 @@
   </div>
 
   <script>
+    var artists = <%- JSON.stringify(artists) %>
+
+    var concertArray = artists.map(function(artist){
+      return artist.concerts ? artist.concerts[0].venue : null;
+    }).filter(function(venue) {
+      return venue;
+    });
+    console.log(concertArray)
+
+    geoData = GeoJSON.parse(concertArray, {Point: ['latitude', 'longitude'], include: ['name']});
+    geoData.features = geoData.features.map(function(feature) {
+      // feature.properties['marker-symbol'] = 'harbor';
+      // feature.properties['marker-size'] = 'large';
+      // feature.properties['marker-color'] = '#3ca0d3';
+      // delete feature.properties.title;
+      return feature
+    });
+    console.log(geoData)
+
     drawMap({
       lat:<%= lat %>,
       lng:<%= lng %>
     });
+
+    setTimeout(function() {
+      // mapLeaflet.on('load', function(){
+        mapLeaflet.addSource("markers", {
+          "type": "geojson",
+          "data": geoData
+        });
+      // })
+
+      mapLeaflet.addLayer({
+          "id": "markers",
+          "type": "symbol",
+          "source": "markers",
+        "layout": {
+            "icon-image": "music-15",
+            "text-field": "concert",
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-offset": [0, 0.6],
+            "text-anchor": "top"
+        }
+      });
+    }, 1000);
+
+
 
     $('#submit-profile').on('click', function(evt) {
       $.ajax({
