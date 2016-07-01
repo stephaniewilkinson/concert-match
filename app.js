@@ -7,7 +7,6 @@ var bodyParser = require('body-parser');
 var session = require('express-session');
 var passport = require('passport');
 var rollbar = require('rollbar');
-
 var routes = require('./routes/index');
 var api = require('./routes/api');
 
