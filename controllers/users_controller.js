@@ -43,12 +43,12 @@ function index(req, res, next){
         );
       });
       Promise.all(venuePromises).then(function(returnedArtists){
-        // lol
-        var badCodeTest = 0;
+
+        var concertTest = 0;
         returnedArtists.forEach(artist => {
-          if (artist.concerts != undefined) { badCodeTest++ };
+          if (artist.concerts != undefined) { concertTest++ };
         });
-        badCodeTest > 0 ? req.user.hasConcerts = true : req.user.hasConcerts = false;
+        concertTest > 0 ? req.user.hasConcerts = true : req.user.hasConcerts = false;
 
         res.render('index', { user: req.user, artists: returnedArtists, lat: userLat, lng: userLng });
       });
