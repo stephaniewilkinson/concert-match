@@ -14,9 +14,11 @@ var mapLeaflet;
 function drawMap(coords){
   mapLeaflet = new mapboxgl.Map({
     container: 'map', // container id
-    style: 'mapbox://styles/mapbox/bright-v9', //stylesheet location
+    style: 'mapbox://styles/mapbox/streets-v9', //stylesheet location
     center: [parseFloat(coords.lng), parseFloat(coords.lat)], // starting position
-    zoom: 12 // starting zoom,
+    zoom: 12, // starting zoom,
+    maxZoom: 14,
+    minZoom: 10,
   });
 
 }
