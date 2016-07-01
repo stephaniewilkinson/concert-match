@@ -14,48 +14,63 @@
       <div class="loader-section section-right"></div>
     </div>
 
-    <div class="artists">
-      <% if (user) { %>
-         <% artists.forEach(function(el, i, arr){ %>
-            <% if (el.concerts) { %>
-              <div class="row">
-                <div class="col s6 offset-s6 m6 offset-m6 l6 offset-l6">
-                  <div class="card">
-                    <div class="card-image">
-                      <img class="hoverable" src="<%=   el.image; %>">
-                      <span class="card-title"><%=   el.name; %></span>
+<div class="artists">
+  <% if (user) { %>
+    <% if (user.hasConcerts) { %>
+      <script>Materialize.toast("We found your top artists' upcoming concerts", 7000)</script>
+      <% artists.forEach(function(artist, i, arr){ %>
+        <% if (artist.concerts) { %>
+          <div class="row">
+            <div class="col s6 offset-s6 m6 offset-m6 l6 offset-l6">
+              <div class="card">
+                <div class="card-image">
+                  <img src="<%=   artist.image; %>">
+                  <span class="card-title"><%=   artist.name; %></span>
+                </div>
+                <div>
+                  <div class="card-content hoverable">
+                    <em style="font-weight: 100; font-size:20px; text-transform: uppercase;">Upcoming concerts:</em>
+                    <div class="divider">
                     </div>
-                    <div>
-                      <div class="card-content hoverable">
-                      <em style="font-weight: 100; font-size:20px; text-transform: uppercase;">Upcoming concerts:</em>
-                      <div class="divider"></div>
-
-                        <% el.concerts.forEach(function(concert, i, arr){ %>
-                          <div class="row">
-                            <div class="col m4 l4">
-                              <img class="responsive-img hoverable" src="<%= concert.artists[0].thumb_url %>">
-                            </div>
-                            <div class="col l8 m8">
-                              <a href="<%= concert.facebook_rsvp_url %>"><p style="font-weight:600; font-size:16px; "><%= concert.title %></p></a>
-                              <p><%= concert.formatted_datetime %></p>
-                              <p><%= concert.venue.name %></p>
-                              <p><%= concert.description %></p>
-                            </div>
-                          </div>
-                        <% });  %>
-
+                    <% artist.concerts.forEach(function(concert, i, arr){ %>
+                      <div class="row">
+                        <div class="col m4 l4">
+                          <img class="responsive-img hoverable" src="<%= concert.artists[0].thumb_url %>">
+                        </div>
+                        <div class="col l8 m8">
+                          <a href="<%= concert.facebook_rsvp_url %>"><p style="font-weight:600; font-size:16px; "><%= concert.title %></p></a>
+                          <p><%= concert.formatted_datetime %></p>
+                          <p><%= concert.venue.name %></p>
+                          <p><%= concert.description %></p>
+                        </div>
                       </div>
-                    </div>
+                    <% }); %>
                   </div>
                 </div>
               </div>
-              <% } %>
-            <% }); %>
-
-      <% } else { %>
-        <a href="/auth/spotify">Login</a>
-      <% } %>
-    </div>
+            </div>
+          </div>
+        <% } %>
+      <% }); %>
+    <% } else { %>
+      <script>Materialize.toast('No upcoming concerts for your top artists', 7000)</script>
+      <% artists.forEach(function(artist, i, arr){ %>
+        <div class="row">
+          <div class="col m6 offset-m3 l5 offset-l1">
+            <div class="card">
+              <div class="card-image">
+                <img src="<%=   artist.image; %>">
+                <span class="card-title"><%=   artist.name; %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    <% } %>
+  <% } else { %>
+    <a href="/auth/spotify">Login</a>
+  <% } %>
+</div>
 
   <div id="modal1" class="modal">
     <div class="modal-content">
@@ -75,8 +90,8 @@
     </div>
   </div>
 
-  <script>
-    var artists = <%- JSON.stringify(artists) %>
+<script>
+   var artists = <%- JSON.stringify(artists) %>
 
     var concertArray = artists.map(function(artist){
       return artist.concerts ? artist.concerts[0].venue : null;
@@ -101,12 +116,10 @@
     });
 
     setTimeout(function() {
-      // mapLeaflet.on('load', function(){
         mapLeaflet.addSource("markers", {
           "type": "geojson",
           "data": geoData
         });
-      // })
 
       mapLeaflet.addLayer({
           "id": "markers",
@@ -121,8 +134,6 @@
         }
       });
     }, 1000);
-
-
 
     $('#submit-profile').on('click', function(evt) {
       $.ajax({
@@ -141,9 +152,6 @@
 $(document).ready(function() {
   $('.modal-trigger').leanModal();
 });
-
-
-  </script>
-
-  </body>
+</script>
+</body>
 </html>

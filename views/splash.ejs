@@ -29,9 +29,9 @@
       navigator.geolocation.getCurrentPosition(function(pos){
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
-        $.get("/api/location?lat=" + lat + "&lng=" + lng);
-        //   window.location.replace("/index");
-        // });
+        $.get("/api/location?lat=" + lat + "&lng=" + lng, function(){
+          window.location.replace("/home");
+        });
       });
   </script>
   </body>
