@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/stylesheets/speaker.css">
 
   </head>
-  <body class='cyan'>
+  <body>
 
   <div id="cabinet">
     <div class="main speaker tweeter">
@@ -15,9 +15,12 @@
     </div>
     <div class="main speaker woofer">
       <div class="speaker woofer small">
-        <a href="/auth/spotify"><img src="../images/logo-medium.png" /></a>
+        <img src="../images/logo-medium.png" />
       </div>
     </div>
+    <br>
+    <br>
+        <a href="/auth/spotify"><img src="../images/spotifylogin.png" class="img-responsive" alt=""></a>
   </div>
 
 
@@ -26,9 +29,9 @@
       navigator.geolocation.getCurrentPosition(function(pos){
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
-        $.get("/api/location?lat=" + lat + "&lng=" + lng, function(){
-          window.location.replace("/index");
-        });
+        $.get("/api/location?lat=" + lat + "&lng=" + lng);
+        //   window.location.replace("/index");
+        // });
       });
   </script>
   </body>

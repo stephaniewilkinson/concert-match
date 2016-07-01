@@ -6,6 +6,7 @@ div {
 div#cabinet {
   margin: 100px auto;
   border: 5px solid black;
+  opacity: 1;
 /* #805203;
 background: #A86E08; */
 }
@@ -22,29 +23,34 @@ div#cabinet .main {
 div.tweeter {
   width: 140px;
   height: 140px;
+  background-color: transparent;
 }
 
 div.woofer {
-   width: 240px;
+  width: 240px;
   height: 240px;
+  background-color: transparent;
 }
 
 #cabinet {
   border-radius: 12px;
   width: 300px;
   height: 450px;
+
 }
 
 .speaker.tweeter.med {
   width: 75px;
   height: 75px;
   margin: 28px auto;
+  background-color: transparent;
 }
 
 .speaker.tweeter.small {
   width: 50px;
   height: 50px;
   margin: 8px auto;
+  background-color: transparent;
 }
 
 img {
