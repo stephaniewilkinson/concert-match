@@ -14,7 +14,7 @@
       <div class="loader-section section-right"></div>
     </div>
 
-    <div class="">
+    <div>
       <% if (user) { %>
          <% artists.forEach(function(el, i, arr){ %>
             <% if (el.concerts) { %>
@@ -22,16 +22,28 @@
                 <div class="col m6 offset-m3 l5 offset-l1">
                   <div class="card">
                     <div class="card-image">
-                      <img src="<%=   el.image; %>">
+                      <img class="hoverable" src="<%=   el.image; %>">
                       <span class="card-title"><%=   el.name; %></span>
                     </div>
                     <div>
-                      <div class="card-content">
-                        <p>
+                      <div class="card-content hoverable">
+                      <em style="font-weight: 100; font-size:20px; text-transform: uppercase;">Upcoming concerts:</em>
+                      <div class="divider"></div>
+
                         <% el.concerts.forEach(function(concert, i, arr){ %>
-                        <%= JSON.stringify(concert.venue) %>
+                          <div class="row">
+                            <div class="col l4">
+                              <img class="responsive-img hoverable" src="<%= concert.artists[0].thumb_url %>">
+                            </div>
+                            <div class="col l8">
+                              <a href="<%= concert.facebook_rsvp_url %>"><p style="font-weight:600; font-size:16px; "><%= concert.title %></p></a>
+                              <p><%= concert.formatted_datetime %></p>
+                              <p><%= concert.venue.name %></p>
+                              <p><%= concert.description %></p>
+                            </div>
+                          </div>
                         <% });  %>
-                        </p>
+
                       </div>
                     </div>
                   </div>
