@@ -2,6 +2,10 @@
   background-color: #00838f;
 }
 
+.artists {
+  background-color: rgba(233, 230, 224, 1);
+}
+
 .card-title {
   text-shadow: -2px 0 black;
   background-color: rgba(0, 0, 0, 0.3);
