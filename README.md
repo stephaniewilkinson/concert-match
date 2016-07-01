@@ -34,10 +34,10 @@ Our app is personalized and local for each user. Once the user logs in, our app 
 
 ###Wireframes
 
-![wireframe splash](../public/images/resized_splash.jpg "wireframe splash") 
-![wireframe index](../public/images/resized_index.jpg "wireframe index")
-![wireframe user](../public/images/resized_user/jpg "wireframe user")
-![wireframe concertpin](../public/images/resized_concert_pin.jpg "wireframe concertpin")
+![wireframe splash](https://github.com/rotatetranslate/concert-match/blob/readme/resized_splash.jpg "wireframe splash") 
+![wireframe index](https://github.com/rotatetranslate/concert-match/blob/readme/resized_index.jpg "wireframe index")
+![wireframe user](https://github.com/rotatetranslate/concert-match/blob/readme/resized_user.jpg "wireframe user")
+![wireframe concertpin](https://github.com/rotatetranslate/concert-match/blob/readme/resized_concert_pin.jpg "wireframe concertpin")
 
     
 [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1162624) (full wireframes)  
