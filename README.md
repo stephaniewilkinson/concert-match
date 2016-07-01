@@ -34,10 +34,10 @@ Our app is personalized and local for each user. Once the user logs in, our app 
 
 ###Wireframes
 
-![wireframe splash](https://s3.amazonaws.com/prod.tracker2/resource/64617681/resized_splash.jpg?response-content-disposition=inline&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJEX3ET63U5T77TYA%2F20160701%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160701T165733Z&X-Amz-Expires=1800&X-Amz-SignedHeaders=host&X-Amz-Signature=7bb7eca297cdfdf8156d4c30bb1e62dc7d9e1ddd7aa769a9594f1c68bcd1e627 "wireframe splash") 
-![wireframe index](https://s3.amazonaws.com/prod.tracker2/resource/64617671/resized_index.jpg?response-content-disposition=inline&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJEX3ET63U5T77TYA%2F20160701%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160701T165733Z&X-Amz-Expires=1800&X-Amz-SignedHeaders=host&X-Amz-Signature=1240b1bdf2d5c901f9c52ef24035854f28cd20a7b33cd4007548e292d5f2df49 "wireframe index")
-![wireframe user](https://s3.amazonaws.com/prod.tracker2/resource/64617661/resized_user.jpg?response-content-disposition=inline&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJEX3ET63U5T77TYA%2F20160701%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160701T165734Z&X-Amz-Expires=1800&X-Amz-SignedHeaders=host&X-Amz-Signature=2848e0b349faa5de6ff61ecdbd2c8599eed30474a428648da422d6f64dad184c "wireframe user")
-![wireframe concertpin](https://s3.amazonaws.com/prod.tracker2/resource/64617651/resized_concert_pin.jpg?response-content-disposition=inline&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJEX3ET63U5T77TYA%2F20160701%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20160701T165733Z&X-Amz-Expires=1800&X-Amz-SignedHeaders=host&X-Amz-Signature=d406c460eb8c6f07cf04cd34e189fe3bf1f5e2edff6d7b2ea087572a66256074 "wireframe concertpin")
+![wireframe splash](https://github.com/rotatetranslate/concert-match/blob/readme/resized_splash.jpg "wireframe splash") 
+![wireframe index](https://github.com/rotatetranslate/concert-match/blob/readme/resized_index.jpg "wireframe index")
+![wireframe user](https://github.com/rotatetranslate/concert-match/blob/readme/resized_user.jpg "wireframe user")
+![wireframe concertpin](https://github.com/rotatetranslate/concert-match/blob/readme/resized_concert_pin.jpg "wireframe concertpin")
 
     
 [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1162624) (full wireframes)  
