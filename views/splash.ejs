@@ -15,7 +15,7 @@
     </div>
     <div class="main speaker woofer">
       <div class="speaker woofer small">
-        <img src="../images/logo-medium.png" />
+        <a href="/auth/spotify"><img src="../images/logo-medium.png" /></a>
       </div>
     </div>
   </div>
@@ -27,7 +27,7 @@
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
         $.get("/api/location?lat=" + lat + "&lng=" + lng, function(){
-          window.location.replace("/login");
+          window.location.replace("/index");
         });
       });
   </script>
