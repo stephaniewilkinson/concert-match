@@ -34,11 +34,8 @@ function index(req, res, next){
               console.log('post-bands');
               var venues = JSON.parse(bodyx);
               if (venues.length >= 1) {
-                req.user.hasConcerts = true;
                 artist.concerts = [];
                 venues.forEach(venue => artist.concerts.push(venue));
-              } else {
-                req.user.hasConcerts = false;
               }
               resolve(artist);
             });
@@ -46,6 +43,13 @@ function index(req, res, next){
         );
       });
       Promise.all(venuePromises).then(function(returnedArtists){
+        // lol
+        var badCodeTest = 0;
+        returnedArtists.forEach(artist => {
+          if (artist.concerts != undefined) { badCodeTest++ };
+        });
+        badCodeTest > 0 ? req.user.hasConcerts = true : req.user.hasConcerts = false;
+
         res.render('index', { user: req.user, artists: returnedArtists, lat: userLat, lng: userLng });
       });
     });

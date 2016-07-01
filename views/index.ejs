@@ -16,7 +16,7 @@
 
     <div class="">
       <% if (user) { %>
-        <% if (user.hasConcerts) { %>
+        <% if (user.hasConcerts === true) { %>
           <script>Materialize.toast("We found your top artists' upcoming concerts", 7000)</script>
           <% artists.forEach(function(el, i, arr){ %>
             <% if (el.concerts) { %>
