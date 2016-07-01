@@ -43,6 +43,13 @@ function index(req, res, next){
         );
       });
       Promise.all(venuePromises).then(function(returnedArtists){
+        // lol
+        var badCodeTest = 0;
+        returnedArtists.forEach(artist => {
+          if (artist.concerts != undefined) { badCodeTest++ };
+        });
+        badCodeTest > 0 ? req.user.hasConcerts = true : req.user.hasConcerts = false;
+
         res.render('index', { user: req.user, artists: returnedArtists, lat: userLat, lng: userLng });
       });
     });
@@ -74,6 +81,5 @@ module.exports = {
   update :  update,
   splash :  splash
 };
-
 
 
