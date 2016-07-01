@@ -37,9 +37,10 @@ body {
   margin-left: -6px !important;
 }
 
-img {
+img.loginimg {
   background-color: black;
 }
+
 #loader-wrapper {
   position: fixed;
   top: 0;
