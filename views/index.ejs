@@ -14,12 +14,12 @@
       <div class="loader-section section-right"></div>
     </div>
 
-    <div>
+    <div class="artists">
       <% if (user) { %>
          <% artists.forEach(function(el, i, arr){ %>
             <% if (el.concerts) { %>
               <div class="row">
-                <div class="col m6 offset-m3 l5 offset-l1">
+                <div class="col s6 offset-s6 m6 offset-m6 l6 offset-l6">
                   <div class="card">
                     <div class="card-image">
                       <img class="hoverable" src="<%=   el.image; %>">
@@ -32,10 +32,10 @@
 
                         <% el.concerts.forEach(function(concert, i, arr){ %>
                           <div class="row">
-                            <div class="col l4">
+                            <div class="col m4 l4">
                               <img class="responsive-img hoverable" src="<%= concert.artists[0].thumb_url %>">
                             </div>
-                            <div class="col l8">
+                            <div class="col l8 m8">
                               <a href="<%= concert.facebook_rsvp_url %>"><p style="font-weight:600; font-size:16px; "><%= concert.title %></p></a>
                               <p><%= concert.formatted_datetime %></p>
                               <p><%= concert.venue.name %></p>
