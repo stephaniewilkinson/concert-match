@@ -7,7 +7,6 @@ var bodyParser = require('body-parser');
 var session = require('express-session');
 var passport = require('passport');
 var rollbar = require('rollbar');
-
 var routes = require('./routes/index');
 var api = require('./routes/api');
 
@@ -52,6 +51,7 @@ app.use(function(req, res, next) {
 // error handlers
 // Use the rollbar error handler to send exceptions to your rollbar account
 // app.use(rollbar.errorHandler('aa5781e25c4e43c9b7ad3735ddf760f7'));
+
 // app.listen(6943);
 
 // development error handler
