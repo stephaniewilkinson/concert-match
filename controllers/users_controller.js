@@ -24,8 +24,6 @@ function index(req, res, next){
       artists.forEach(function(artist) {
         // remove special characters
         var artistName = artist.name.replace(/&/g,'and').split(' ').join('%20');
-        // var url =  `http://api.bandsintown.com/artists/${artistName}/events.json?api_version=2.0&app_id=concertmatch`
-        //this url isn't properly formatted, i don't think (these values exist at this point)
         var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat.toString()},${userLng.toString()}&radius=50`;
         venuePromises.push(
           new Promise(function(resolve, reject){
@@ -81,5 +79,3 @@ module.exports = {
   update :  update,
   splash :  splash
 };
-
-
