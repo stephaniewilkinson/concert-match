@@ -28,11 +28,12 @@ function index(req, res, next){
         venuePromises.push(
           new Promise(function(resolve, reject){
             request.get(url, function(errorx, responsex, bodyx) {
-              console.log(JSON.parse(bodyx))
-              var venues = JSON.parse(bodyx);
-              if (venues.length >= 1) {
-                artist.concerts = [];
-                venues.forEach(venue => artist.concerts.push(venue));
+              if (bodyx[0] != '<') {
+                var venues = JSON.parse(bodyx);
+                if ((venues.length != 'undefined') && venues.length >= 1) {
+                  artist.concerts = [];
+                  venues.forEach(venue => artist.concerts.push(venue));
+                }
               }
               resolve(artist);
             });
