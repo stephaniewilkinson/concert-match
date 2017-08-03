@@ -9,9 +9,9 @@ A streamlined app to easily find local concerts for your favorite artists. Conce
 ###Team
 [Stephanie](https://github.com/stephaniewilkinson) - Github Manager  
 [Nate](https://github.com/pnguye11) - Product Manager  
-[Adam](https://github.com/rotatetranslate/) - API/Documentation 
+[Adam](https://github.com/rotatetranslate/) - API/Documentation
 
-##Technologies Used
+## Technologies Used
 * Javascript
 * jQuery
 * Node.js
@@ -34,12 +34,12 @@ Our app is personalized and local for each user. Once the user logs in, our app 
 
 ###Wireframes
 
-![wireframe splash](https://github.com/rotatetranslate/concert-match/blob/readme/resized_splash.jpg "wireframe splash") 
+![wireframe splash](https://github.com/rotatetranslate/concert-match/blob/readme/resized_splash.jpg "wireframe splash")
 ![wireframe index](https://github.com/rotatetranslate/concert-match/blob/readme/resized_index.jpg "wireframe index")
 ![wireframe user](https://github.com/rotatetranslate/concert-match/blob/readme/resized_user.jpg "wireframe user")
 ![wireframe concertpin](https://github.com/rotatetranslate/concert-match/blob/readme/resized_concert_pin.jpg "wireframe concertpin")
 
-    
+
 [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1162624) (full wireframes)  
 [Pitch Deck](https://github.com/rotatetranslate/concert-match/blob/master/Concert%20Match%20Pitch%20Deck.pdf)  
 
@@ -48,10 +48,10 @@ Deployed on heroku. Login with spotify account.
 [concert-match](http://concert-match.herokuapp.com)
 
 ##Unsolved Problems/Next Steps
-* Pins dynamically dropping on the map as your scroll through your top artists 
+* Pins dynamically dropping on the map as your scroll through your top artists
 * Click pins to get more info about specific concert
 * Integrate Soundcloud
-* Integrate Last.fm 
+* Integrate Last.fm
 * Fix all bugs
 
 ##Credits

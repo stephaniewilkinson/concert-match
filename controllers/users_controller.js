@@ -27,9 +27,8 @@ function index(req, res, next){
         var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat.toString()},${userLng.toString()}&radius=50`;
         venuePromises.push(
           new Promise(function(resolve, reject){
-            console.log('pre-bands request');
             request.get(url, function(errorx, responsex, bodyx) {
-              console.log('post-bands');
+              console.log(JSON.parse(bodyx))
               var venues = JSON.parse(bodyx);
               if (venues.length >= 1) {
                 artist.concerts = [];
