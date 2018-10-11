@@ -23,10 +23,10 @@ function index(req, res, next){
       };
       artists.forEach(function(artist) {
         // remove special characters
-        // var removeDiacritics = require('diacritics').remove;
-        // var artistName = removeDiacritics(artist.name.replace(/&/g,'and').split(' ').join('%20'));
-        var artistName = artist.name.replace(/&/g,'and').split(' ').join('%20');
-        var url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat.toString()},${userLng.toString()}&radius=50`;
+        var removeDiacritics = require('diacritics').remove;
+        var artistName = removeDiacritics(artist.name.replace(/&/g,'and').split(' ').join('%20'));
+
+        let url = `http://api.bandsintown.com/artists/${artistName}/events/search.json?api_version=2.0&app_id=concertmatch&location=${userLat.toString()},${userLng.toString()}&radius=50`;
         venuePromises.push(
           new Promise(function(resolve, reject){
             request.get(url, function(errorx, responsex, bodyx) {
