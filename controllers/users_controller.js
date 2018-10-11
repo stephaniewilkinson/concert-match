@@ -1,4 +1,3 @@
-var User = require('../models/user')
 var request = require('request')
 
 function splash (req, res, next) {

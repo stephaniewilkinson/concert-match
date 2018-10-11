@@ -12,7 +12,7 @@ function (accessToken, refreshToken, profile, done) {
   User.findOne({ providerId: profile.id }, function (err, user) {
     if (err) { return done(err) };
     if (user) {
-      if (user.accessToken != accessToken) {
+      if (user.accessToken !== accessToken) {
         user.accessToken = accessToken
         user.save(function (err, user) {
           if (err) { return done(err) }
@@ -46,20 +46,3 @@ passport.deserializeUser(function (id, done) {
     return done(err, user)
   })
 })
-
-// var options = {
-//   url: 'https://api.spotify.com/v1/me/top/artists?limit=20',
-//   headers: {
-//     'Authorization': 'Bearer ' + user.accessToken
-//   }
-// };
-
-// function cb(err, res, body) {
-//   if (!err && res.statusCode == 200) {
-//     var artists = JSON.parse(body);
-//     var artistNames = [];
-//     artists.forEach(artist => artistNames.push(artist.name));
-//   }
-// }
-
-// request(options, cb);

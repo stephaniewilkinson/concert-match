@@ -48,7 +48,7 @@ app.use(function (req, res, next) {
   next(err)
 })
 
-app.use(rollbar.errorHandler('fa0503106e2444948d52ad8f04132b75'));
+app.use(rollbar.errorHandler('fa0503106e2444948d52ad8f04132b75'))
 
 // app.listen(6943);
 
