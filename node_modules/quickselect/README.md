@@ -1,4 +1,4 @@
-## quickselect
+## quickselect [![Build Status](https://travis-ci.org/mourner/quickselect.svg?branch=master)](https://travis-ci.org/mourner/quickselect)
 
 A tiny and fast [selection algorithm](https://en.wikipedia.org/wiki/Selection_algorithm) in JavaScript
 (specifically, [Floyd-Rivest selection](https://en.wikipedia.org/wiki/Floyd%E2%80%93Rivest_algorithm)).
@@ -20,7 +20,9 @@ Example:
 
 ```js
 var arr = [65, 28, 59, 33, 21, 56, 22, 95, 50, 12, 90, 53, 28, 77, 39];
+
 quickselect(arr, 8);
-// [39, 28, 28, 33, 21, 12, 22, 50, 53, 56, 59, 65, 90, 77, 95]
-//                              ^^ 8th item
+
+// arr is [39, 28, 28, 33, 21, 12, 22, 50, 53, 56, 59, 65, 90, 77, 95]
+//                                         ^^ middle index
 ```
