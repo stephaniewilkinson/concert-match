@@ -15,8 +15,14 @@ of your browsers Javascript engine.
 
 Learn More
 ----------------------
-For documentation, news, tutorials, and more visit the [glMatrix Homepage](http://glmatrix.net/)
+For documentation and news, visit the [glMatrix Homepage](http://glmatrix.net/)
 
-Contributing
+For a tutorial, see [the "introducing glMatrix" section of _Introduction to Computer Graphics_ by David J. Eck](http://math.hws.edu/graphicsbook/c7/s1.html#webgl3d.1.2)
+
+Contributing Guidelines
 ----------------------
-Contributions are welcome! Please provide unit tests for new functionality. (See TESTING.md for details)
+See [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+Building
+----------------------
+See [BUILDING.md](./BUILDING.md)
