@@ -22,7 +22,7 @@ require('./config/db')
 require('./config/passport')
 
 // uncomment after placing your favicon in /public
-// app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(favicon(path.join(__dirname, 'public', 'images/favicon.ico')))
 app.use(session({
   secret: 'delectico',
   resave: false,
@@ -48,9 +48,7 @@ app.use(function (req, res, next) {
   next(err)
 })
 
-// error handlers
-// Use the rollbar error handler to send exceptions to your rollbar account
-// app.use(rollbar.errorHandler('aa5781e25c4e43c9b7ad3735ddf760f7'));
+app.use(rollbar.errorHandler('fa0503106e2444948d52ad8f04132b75'));
 
 // app.listen(6943);
 
