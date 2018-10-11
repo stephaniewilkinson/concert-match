@@ -27,6 +27,7 @@
     "passport-spotify": "^0.3.0",
     "request": "^2.88.0",
     "rollbar": "^0.6.2",
+    "selenium-webdriver": "^4.0.0-alpha.1",
     "serve-favicon": "^2.5.0",
     "supertest": "1.2.0"
   }
