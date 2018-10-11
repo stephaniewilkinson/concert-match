@@ -5,6 +5,7 @@ describe('loading express', function () {
     app = require('../app');
   });
   afterEach(function () {
+    app = require('../app');
     var server = app.listen(3000);
     server.close();
   });
