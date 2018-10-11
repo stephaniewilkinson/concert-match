@@ -3,8 +3,14 @@
 ![home view drake concert](https://cloud.githubusercontent.com/assets/2397260/16511720/1577021a-3f08-11e6-8788-ad5dada6289e.png "Concert Match")
 
 
-#Concert-Match
+# Concert-Match
 A streamlined app to easily find local concerts for your favorite artists. Concert Match pulls your top artists from your spotify account, then searches for their upcoming concerts based on your current location.
+
+# Run the app
+`npm start`
+
+# Run tests
+`npm test`
 
 ###Team
 [Stephanie](https://github.com/stephaniewilkinson) - Github Manager  
