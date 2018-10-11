@@ -6,6 +6,9 @@
 #Concert-Match
 A streamlined app to easily find local concerts for your favorite artists. Concert Match pulls your top artists from your spotify account, then searches for their upcoming concerts based on your current location.
 
+# Run the app
+`npm start`
+
 ###Team
 [Stephanie](https://github.com/stephaniewilkinson) - Github Manager  
 [Nate](https://github.com/pnguye11) - Product Manager  
