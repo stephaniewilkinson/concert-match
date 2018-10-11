@@ -1,17 +1,15 @@
-$(function() {
+$(function () {
+  'use strict'
 
-  "use strict";
+  var window_width = $(window).width()
 
-  var window_width = $(window).width();
+  $(window).load(function () {
+    setTimeout(function () {
+      $('body').addClass('loaded')
+    }, 200)
+  })
 
-  $(window).load(function() {
-    setTimeout(function() {
-      $('body').addClass('loaded');
-    }, 200);
-  });
-
-  $('.toggle-fullscreen').click(function() {
-    toggleFullScreen();
-  });
-
-});
+  $('.toggle-fullscreen').click(function () {
+    toggleFullScreen()
+  })
+})
