@@ -1,3 +1,6 @@
+[ ![Codeship Status for stephaniewilkinson/concert-match](https://app.codeship.com/projects/c4de8a90-af1a-0136-0ae0-0651a7161cf6/status?branch=master)](https://app.codeship.com/projects/310121)
+[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=stephaniewilkinson/yonderbook)](https://dependabot.com)
+
 ![home view kendrick lamar concert](https://cloud.githubusercontent.com/assets/2397260/16511721/158cbf56-3f08-11e6-9bd8-0e8e20ede8f6.png "Concert Match")  
 
 ![home view drake concert](https://cloud.githubusercontent.com/assets/2397260/16511720/1577021a-3f08-11e6-8788-ad5dada6289e.png "Concert Match")
