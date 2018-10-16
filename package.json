@@ -26,7 +26,7 @@
     "mocha": "3.2.0",
     "mongoose": "^5.3.4",
     "morgan": "^1.9.1",
-    "passport": "^0.3.2",
+    "passport": "^0.4.0",
     "passport-spotify": "^0.3.0",
     "request": "^2.88.0",
     "rollbar": "^2.4.7",
