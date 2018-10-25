@@ -27,7 +27,7 @@
     "mongoose": "^5.3.6",
     "morgan": "^1.9.1",
     "passport": "^0.4.0",
-    "passport-spotify": "^0.3.0",
+    "passport-spotify": "^1.0.1",
     "request": "^2.88.0",
     "rollbar": "^2.5.0",
     "selenium-webdriver": "^4.0.0-alpha.1",
