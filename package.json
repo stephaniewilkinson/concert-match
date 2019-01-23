@@ -29,7 +29,7 @@
     "passport": "^0.4.0",
     "passport-spotify": "^1.0.1",
     "request": "^2.88.0",
-    "rollbar": "^2.5.1",
+    "rollbar": "^2.5.2",
     "selenium-webdriver": "^4.0.0-alpha.1",
     "serve-favicon": "^2.5.0",
     "supertest": "3.3.0"
