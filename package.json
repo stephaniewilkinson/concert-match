@@ -24,7 +24,7 @@
     "mapbox-gl": "^0.53.0",
     "mapbox-gl-supported": "^1.1.0",
     "mocha": "3.2.0",
-    "mongoose": "^5.4.9",
+    "mongoose": "^5.4.10",
     "morgan": "^1.9.1",
     "passport": "^0.4.0",
     "passport-spotify": "^1.0.1",
