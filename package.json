@@ -33,6 +33,6 @@
     "rollbar": "^2.6.1",
     "selenium-webdriver": "^4.0.0-alpha.1",
     "serve-favicon": "^2.5.0",
-    "supertest": "3.4.2"
+    "supertest": "4.0.2"
   }
 }
