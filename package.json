@@ -20,7 +20,7 @@
     "growl": ">=1.10.5",
     "dotenv": "^6.2.0",
     "ejs": "~2.6.1",
-    "express": "^4.16.4",
+    "express": "^4.17.1",
     "express-session": "^1.15.6",
     "mapbox-gl": "^0.54.0",
     "mapbox-gl-supported": "^1.1.0",
