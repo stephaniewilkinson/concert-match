@@ -22,7 +22,7 @@
     "ejs": "~2.6.2",
     "express": "^4.17.1",
     "express-session": "^1.16.2",
-    "mapbox-gl": "^1.2.0",
+    "mapbox-gl": "^1.4.0",
     "mapbox-gl-supported": "^1.1.0",
     "mocha": "3.2.0",
     "mongoose": "^5.6.7",
