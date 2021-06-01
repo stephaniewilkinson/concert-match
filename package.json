@@ -29,7 +29,7 @@
     "morgan": "^1.9.1",
     "passport": "^0.4.1",
     "passport-spotify": "^1.1.0",
-    "request": "^2.88.0",
+    "request": "^2.88.2",
     "rollbar": "^2.14.4",
     "selenium-webdriver": "^4.0.0-alpha.5",
     "serve-favicon": "^2.5.0",
