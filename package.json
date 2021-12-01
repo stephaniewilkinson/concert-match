@@ -14,7 +14,7 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "chai": "^4.2.0",
-    "cookie-parser": "~1.4.4",
+    "cookie-parser": "~1.4.6",
     "debug": "~4.1.1",
     "diacritics": "^1.3.0",
     "growl": ">=1.10.5",
