@@ -26,10 +26,7 @@ defmodule ConcertMatchWeb.Layouts do
 
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
-
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
+  attr :current_user, :map, default: nil, doc: "the logged-in user, if any"
 
   slot :inner_block, required: true
 
@@ -37,33 +34,29 @@ defmodule ConcertMatchWeb.Layouts do
     ~H"""
     <header class="navbar px-4 sm:px-6 lg:px-8">
       <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
+        <a href="/" class="flex w-fit items-center gap-2">
+          <img src={~p"/images/wordmark.png"} alt="Concert Match" width="160" />
         </a>
       </div>
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
+          <li :if={@current_user}>
+            <.link navigate={~p"/settings"} class="btn btn-ghost">Settings</.link>
           </li>
           <li>
             <.theme_toggle />
           </li>
-          <li>
-            <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
+          <li :if={@current_user}>
+            <.link href={~p"/auth/logout"} method="delete" class="btn btn-ghost">
+              Log out
+            </.link>
           </li>
         </ul>
       </div>
     </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
+    <main class="px-4 py-12 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-3xl space-y-4">
         {render_slot(@inner_block)}
       </div>
     </main>

@@ -1,6 +1,8 @@
 defmodule ConcertMatchWeb.Router do
   use ConcertMatchWeb, :router
 
+  import ConcertMatchWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule ConcertMatchWeb.Router do
     plug :put_root_layout, html: {ConcertMatchWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user
   end
 
   pipeline :api do
@@ -18,12 +21,21 @@ defmodule ConcertMatchWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    get "/auth/spotify", AuthController, :request
+    get "/auth/spotify/callback", AuthController, :callback
+    delete "/auth/logout", AuthController, :delete
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", ConcertMatchWeb do
-  #   pipe_through :api
-  # end
+  scope "/", ConcertMatchWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :authenticated,
+      on_mount: [{ConcertMatchWeb.UserAuth, :ensure_authenticated}] do
+      live "/home", HomeLive
+      live "/settings", SettingsLive
+    end
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:concert_match, :dev_routes) do

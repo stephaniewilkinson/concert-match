@@ -26,6 +26,22 @@ config :concert_match, ConcertMatch.Mailer, adapter: Swoosh.Adapters.Test
 # Jobs run inline via Oban.Testing rather than through queues or cron
 config :concert_match, Oban, testing: :manual
 
+# Credentials are dummies; every outbound call is stubbed with Req.Test.
+config :concert_match, :spotify,
+  client_id: "test-client-id",
+  client_secret: "test-client-secret",
+  redirect_uri: "http://127.0.0.1:4002/auth/spotify/callback"
+
+config :concert_match, :ticketmaster, api_key: "test-api-key"
+
+config :concert_match, :spotify_req_options,
+  plug: {Req.Test, ConcertMatch.Spotify.OAuth},
+  retry: false
+
+config :concert_match, :ticketmaster_req_options,
+  plug: {Req.Test, ConcertMatch.Events.Sources.Ticketmaster},
+  retry: false
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

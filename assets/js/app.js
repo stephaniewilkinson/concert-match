@@ -25,11 +25,30 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/concert_match"
 import topbar from "../vendor/topbar"
 
+// Fills the settings form's latitude and longitude from the browser. The
+// coordinates are only ever pushed to the server on an explicit click.
+const Geolocate = {
+  mounted() {
+    this.el.addEventListener("cm:geolocate", () => {
+      if (!navigator.geolocation) {
+        return
+      }
+      navigator.geolocation.getCurrentPosition(
+        ({coords}) => this.pushEvent("set_location", {
+          lat: coords.latitude,
+          lng: coords.longitude,
+        }),
+        error => console.warn("geolocation refused:", error.message)
+      )
+    })
+  },
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, Geolocate},
 })
 
 // Show progress bar on live navigation and form submits
