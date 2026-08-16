@@ -27,14 +27,25 @@ config :concert_match, ConcertMatchWeb.Endpoint,
 # environment rather than a committed file on purpose -- see this repo's
 # history for why. Use direnv, a shell profile, or your host's secret store.
 if config_env() != :test do
+  # Render populates RENDER_EXTERNAL_HOSTNAME, so the callback URL doesn't have
+  # to be configured twice. Whatever this resolves to must be registered
+  # verbatim as a redirect URI on the Spotify app, or the login 400s.
+  default_redirect_uri =
+    case System.get_env("RENDER_EXTERNAL_HOSTNAME") do
+      nil -> "http://127.0.0.1:4000/auth/spotify/callback"
+      hostname -> "https://#{hostname}/auth/spotify/callback"
+    end
+
   config :concert_match, :spotify,
     client_id: System.get_env("SPOTIFY_CLIENT_ID"),
     client_secret: System.get_env("SPOTIFY_CLIENT_SECRET"),
-    redirect_uri:
-      System.get_env("SPOTIFY_REDIRECT_URI") ||
-        "http://127.0.0.1:4000/auth/spotify/callback"
+    redirect_uri: System.get_env("SPOTIFY_REDIRECT_URI") || default_redirect_uri
 
   config :concert_match, :ticketmaster, api_key: System.get_env("TICKETMASTER_API_KEY")
+
+  if from = System.get_env("MAIL_FROM") do
+    config :concert_match, :mail_from, from
+  end
 end
 
 if config_env() == :prod do
@@ -67,7 +78,17 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  # Render supplies RENDER_EXTERNAL_HOSTNAME; PHX_HOST overrides it for a
+  # custom domain or another host entirely.
+  host =
+    System.get_env("PHX_HOST") || System.get_env("RENDER_EXTERNAL_HOSTNAME") ||
+      raise """
+      No hostname configured.
+
+      Set PHX_HOST, or deploy somewhere that populates RENDER_EXTERNAL_HOSTNAME.
+      URLs in digest emails are absolute, so guessing here would send people
+      links to the wrong place.
+      """
 
   config :concert_match, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
@@ -114,21 +135,20 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
-  # ## Configuring the mailer
+  # ## Mail
   #
-  # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
+  # Without RESEND_API_KEY the app still boots and still matches -- it just
+  # drops every email into the in-memory local adapter. ConcertMatch.Application
+  # warns about that at startup, where the Logger is actually running; a warning
+  # from here would be swallowed, since config runs before Logger starts.
   #
-  #     config :concert_match, ConcertMatch.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+  # Swoosh ships adapters for Postmark, Mailgun, SES and others if you'd rather
+  # use one of those; the shape is the same.
+  if api_key = System.get_env("RESEND_API_KEY") do
+    config :concert_match, ConcertMatch.Mailer,
+      adapter: Swoosh.Adapters.Resend,
+      api_key: api_key
+
+    config :swoosh, :api_client, Swoosh.ApiClient.Req
+  end
 end

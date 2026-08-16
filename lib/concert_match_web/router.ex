@@ -17,6 +17,12 @@ defmodule ConcertMatchWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # Outside the browser pipeline: a health check shouldn't need a session or
+  # carry a CSRF token, and Render polls it constantly.
+  scope "/", ConcertMatchWeb do
+    get "/healthz", HealthController, :index
+  end
+
   scope "/", ConcertMatchWeb do
     pipe_through :browser
 

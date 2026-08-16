@@ -1,0 +1,86 @@
+# Render Blueprint. Create the stack from this file with Render's
+# "New > Blueprint" flow pointed at this repo.
+#
+# Everything here fits Render's free tier. Note that free web services spin
+# down after inactivity and cold-start on the next request, and free Postgres
+# instances expire after 30 days. For an app that emails five people that is
+# mostly fine, with one real consequence: a spun-down service runs no cron, so
+# the nightly sweep is skipped. See the note on the schedule below.
+
+databases:
+  - name: concert-match-db
+    databaseName: concert_match
+    plan: free
+    # Oregon is Render's default; keep the service in the same region so the
+    # database is reachable over the private network.
+    region: oregon
+
+services:
+  - type: web
+    name: concert-match
+    runtime: elixir
+    plan: free
+    region: oregon
+    branch: master
+
+    buildCommand: ./build.sh
+
+    # Migrations run here rather than in preDeployCommand, which Render only
+    # offers on paid instance types. Running them at boot is safe for a
+    # single-instance app; if this ever runs more than one instance, move this
+    # to preDeployCommand so concurrent boots can't race the same migration.
+    startCommand: >-
+      _build/release/bin/migrate &&
+      _build/release/bin/server
+
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concert-match-db
+          property: connectionString
+
+      # Render generates this once and keeps it. Regenerating it invalidates
+      # every existing session cookie.
+      - key: SECRET_KEY_BASE
+        generateValue: true
+
+      # Prompted for on Blueprint creation rather than stored in this file.
+      #
+      # Rotate the Spotify secret before using it: the 2016 version of this app
+      # committed its .env and left it tracked in a public repo for ten years,
+      # so the credentials in this repo's history must be considered burned.
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: TICKETMASTER_API_KEY
+        sync: false
+
+      # Optional. Without it the app still runs and still matches, but digests
+      # go nowhere -- Swoosh falls back to the local adapter, which only stores
+      # mail in memory. Get a key at resend.com and set MAIL_FROM to an address
+      # on a domain you've verified there.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+      # Pinned so a deploy six months from now builds the same way. These must
+      # be versions Render actually offers -- see
+      # https://render.com/docs/elixir-erlang-versions. Local development is on
+      # a newer Elixir than this; mix.exs only requires ~> 1.15, so both work.
+      - key: ELIXIR_VERSION
+        value: 1.19.5
+      - key: ERLANG_VERSION
+        value: "28.3"
+
+# The nightly schedule lives in Oban's cron, inside the app, so it needs the
+# web service to be awake at 09:00 and 10:00 UTC. On the free plan the service
+# sleeps when idle and those runs are simply missed.
+#
+# If the sweeps turn out to be unreliable, the fix is either a paid instance
+# (which doesn't sleep) or a Render cron job that curls the service awake
+# beforehand. Upgrading the plan is the honest option; the curl trick just
+# moves the problem.

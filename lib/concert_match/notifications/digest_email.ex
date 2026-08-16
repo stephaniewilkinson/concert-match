@@ -11,7 +11,12 @@ defmodule ConcertMatch.Notifications.DigestEmail do
 
   alias ConcertMatch.Accounts.User
 
-  @from {"Concert Match", "hello@concertmatch.app"}
+  # Whatever this is has to be on a domain verified with your mail provider,
+  # or every digest silently bounces.
+  defp from_address do
+    {"Concert Match",
+     Application.get_env(:concert_match, :mail_from, "concert-match@example.com")}
+  end
 
   @doc """
   Build the digest for one user.
@@ -24,7 +29,7 @@ defmodule ConcertMatch.Notifications.DigestEmail do
   def build(%User{} = user, matches, names) do
     new()
     |> to({user.display_name || "there", user.email})
-    |> from(@from)
+    |> from(from_address())
     |> subject(subject_line(matches))
     |> text_body(text_body(user, matches, names))
     |> html_body(html_body(user, matches, names))

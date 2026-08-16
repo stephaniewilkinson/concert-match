@@ -78,6 +78,40 @@ mix precommit     # compile with warnings as errors, format, test
 
 Sent mail is viewable in development at http://127.0.0.1:4000/dev/mailbox.
 
+## Deploying
+
+`render.yaml` is a [Render Blueprint](https://render.com/docs/blueprint-spec).
+Point Render's **New → Blueprint** flow at this repo and it creates the web
+service and a Postgres database together. You'll be prompted for the values
+marked `sync: false`: the Spotify and Ticketmaster credentials, and optionally
+`RESEND_API_KEY` / `MAIL_FROM`.
+
+Two things to do after the first deploy:
+
+1. **Register the callback URL with Spotify.** The app derives it from
+   `RENDER_EXTERNAL_HOSTNAME`, so it will be
+   `https://<your-service>.onrender.com/auth/spotify/callback`. It has to be
+   added to the Spotify app's redirect URIs verbatim or login fails.
+2. **Set up mail.** Without `RESEND_API_KEY` the app runs and matches normally
+   but delivers nothing — Swoosh falls back to an in-memory adapter. It logs a
+   warning at startup when this is the case, so check the boot log.
+
+Migrations run from the start command rather than `preDeployCommand`, which
+Render only offers on paid instance types. That's fine for a single instance;
+if this ever runs more than one, move them so concurrent boots can't race.
+
+Note that free web services sleep when idle, and the nightly schedule is Oban
+cron *inside* the app — a sleeping service runs no cron and skips that night's
+sweep. If that becomes a problem the honest fix is a paid instance.
+
+To build and run a release locally:
+
+```sh
+./build.sh
+DATABASE_URL=... SECRET_KEY_BASE=$(mix phx.gen.secret) PHX_HOST=localhost \
+  _build/release/bin/migrate && _build/release/bin/server
+```
+
 ## Credentials
 
 Nothing secret gets committed. Credentials load from the environment via
