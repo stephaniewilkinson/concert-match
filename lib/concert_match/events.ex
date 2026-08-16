@@ -213,6 +213,24 @@ defmodule ConcertMatch.Events do
   end
 
   @doc """
+  Everything upcoming that matches one user, split by whether anyone else is in.
+
+  Used by the home page; the digest has its own version that also excludes
+  shows the user has already been emailed about.
+  """
+  @spec matches_for_user(integer()) :: %{shared: [map()], solo: [map()]}
+  def matches_for_user(user_id) do
+    events = list_upcoming_events()
+
+    shared =
+      events
+      |> shared_matches()
+      |> Enum.filter(fn %{users: users} -> Enum.any?(users, &(&1.user_id == user_id)) end)
+
+    %{shared: shared, solo: solo_matches(user_id, events)}
+  end
+
+  @doc """
   Upcoming events we have already stored, optionally limited to those first
   seen since a given time.
   """

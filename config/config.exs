@@ -46,7 +46,8 @@ config :concert_match, Oban,
      crontab: [
        # Times are UTC. 09:00 UTC is the small hours across the US.
        {"0 9 * * *", ConcertMatch.Workers.RefreshTasteWorker},
-       {"0 10 * * *", ConcertMatch.Workers.SweepEventsWorker}
+       {"0 10 * * *", ConcertMatch.Workers.SweepEventsWorker},
+       {"0 11 * * *", ConcertMatch.Workers.DigestWorker}
      ]}
   ]
 
