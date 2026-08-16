@@ -1,69 +1,73 @@
-[ ![Codeship Status for stephaniewilkinson/concert-match](https://app.codeship.com/projects/c4de8a90-af1a-0136-0ae0-0651a7161cf6/status?branch=master)](https://app.codeship.com/projects/310121)
-[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=stephaniewilkinson/concert-match)](https://dependabot.com)
+# Concert Match
 
-![home view kendrick lamar concert](https://cloud.githubusercontent.com/assets/2397260/16511721/158cbf56-3f08-11e6-9bd8-0e8e20ede8f6.png "Concert Match")  
+Find concerts you and your friends both want to go to, and get an email when
+one is announced.
 
-![home view drake concert](https://cloud.githubusercontent.com/assets/2397260/16511720/1577021a-3f08-11e6-8788-ad5dada6289e.png "Concert Match")
+Concert Match reads your Spotify listening — top artists, follows, saved
+library — and does the same for a handful of friends. When a newly announced
+show near you features an artist that two or more of you care about, everyone
+who matches gets a note saying who else is in.
 
+Originally built in 2016 as a code-school project in Node and Express;
+rewritten in Elixir. The 2016 version is still in this repo's history.
 
-# Concert-Match
-A streamlined app to easily find local concerts for your favorite artists. Concert Match pulls your top artists from your spotify account, then searches for their upcoming concerts based on your current location.
+## Requirements
 
-# Run the app
-`npm start`
+- Elixir 1.15+ and Erlang/OTP 26+
+- PostgreSQL
+- A Spotify app (see below)
+- A Ticketmaster Discovery API key
 
-# Run tests
-`npm test`
+## Setup
 
-###Team
-[Stephanie](https://github.com/stephaniewilkinson) - Github Manager  
-[Nate](https://github.com/pnguye11) - Product Manager  
-[Adam](https://github.com/rotatetranslate/) - API/Documentation
+```sh
+cp .env.example .env      # then fill it in
+mix setup                 # deps, database, assets
+mix phx.server
+```
 
-## Technologies Used
-* Javascript
-* jQuery
-* Node.js
-* Express
-* MongoDB
-* OAuth (Spotify)
-* APIs (Spotify, Bands in Town, Mapbox)
-* HTML
-* CSS (Materialize)
+The app runs at http://127.0.0.1:4000.
 
-##API
-* Spotify API to GET top artists of logged in user
-* BandsInTown API to GET concert data for top artists in 50 mile radius of current location
-* Mapbox to display current location and concert data on map
+### Spotify
 
-##Approach
-We wanted to create a simple, streamlined app to find local concerts based on the user's top spotify artists. We stripped away additional features found on apps like [Bands in Town](http://news.bandsintown.com/home), [Songkick](http://www.songkick.com/), or [Ticketmaster](http://www.ticketmaster.com/) such as setting search parameters and buying tickets in order to create a focused, uncomplicated user experience.
+Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+and register `http://127.0.0.1:4000/auth/spotify/callback` as a redirect URI —
+Spotify requires the loopback IP rather than `localhost`.
 
-Our app is personalized and local for each user. Once the user logs in, our app finds and displays all the information they need by searching for concerts of their top [Spotify](https://www.spotify.com/us/) artists in a 50 mile radius of their current location.
+**Spotify caps development-mode apps at 5 authenticated users.** Extended access
+has required a registered organization with substantial monthly actives since
+May 2025, so this is a real ceiling rather than a setting. Add each friend's
+Spotify account to the app's user allowlist in the dashboard. Concert Match is
+built for you and up to four other people, and its design leans on that.
 
-###Wireframes
+Scopes used: `user-top-read`, `user-follow-read`, `user-library-read`,
+`playlist-read-private`, `user-read-email`.
 
-![wireframe splash](https://github.com/rotatetranslate/concert-match/blob/readme/resized_splash.jpg "wireframe splash")
-![wireframe index](https://github.com/rotatetranslate/concert-match/blob/readme/resized_index.jpg "wireframe index")
-![wireframe user](https://github.com/rotatetranslate/concert-match/blob/readme/resized_user.jpg "wireframe user")
-![wireframe concertpin](https://github.com/rotatetranslate/concert-match/blob/readme/resized_concert_pin.jpg "wireframe concertpin")
+### Ticketmaster
 
+Get a free key at [developer.ticketmaster.com](https://developer.ticketmaster.com).
+The free tier allows 5000 calls/day at 5 requests/second, far more than this app
+needs — event lookups scale with the number of cities you and your friends live
+in, not the number of artists you listen to.
 
-[Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1162624) (full wireframes)  
-[Pitch Deck](https://github.com/rotatetranslate/concert-match/blob/master/Concert%20Match%20Pitch%20Deck.pdf)  
+Ticketmaster is currently the only viable free source of concert data.
+Bandsintown went partner-only and Songkick now requires a paid license that
+explicitly excludes hobby projects. Event ingestion sits behind the
+`ConcertMatch.Events.Source` behaviour so a second source can be added without
+touching the matching logic.
 
-##Installation
-Deployed on heroku. Login with spotify account.  
-[concert-match](http://concert-match.herokuapp.com)
+## Development
 
-##Unsolved Problems/Next Steps
-* Pins dynamically dropping on the map as your scroll through your top artists
-* Click pins to get more info about specific concert
-* Integrate Soundcloud
-* Integrate Last.fm
-* Fix all bugs
+```sh
+mix test          # test suite
+mix precommit     # compile with warnings as errors, format, test
+```
 
-##Credits
-Many thanks to our instructors for helping us through some major hurdles with our project.
-> [Ezra Raez](https://github.com/EARnagram)  
-> [Jim Clark](https://github.com/jim-clark)
+Sent mail is viewable in development at http://127.0.0.1:4000/dev/mailbox.
+
+## Credentials
+
+Nothing secret gets committed. Credentials load from the environment via
+`config/runtime.exs`; `.env` is gitignored. The original version of this app
+committed its `.env` in the first week and left it tracked in a public repo for
+ten years, which is the kind of mistake you only need to make once.
