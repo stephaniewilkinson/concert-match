@@ -31,14 +31,23 @@ config :concert_match, ConcertMatchWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :concert_match, ConcertMatch.Mailer, adapter: Swoosh.Adapters.Local
 
-# Background jobs. The nightly crontab is added in config/runtime.exs once
-# the workers exist; queues are sized for a handful of users, not a crowd.
+# Background jobs. Queues are sized for a handful of users, not a crowd.
+#
+# The nightly chain is separated in time rather than chained by callback:
+# taste first, then the event sweep, then digests. An hour of slack between
+# stages is far more than five users need, and it means a stalled refresh
+# delays one night's email rather than wedging the pipeline.
 config :concert_match, Oban,
   repo: ConcertMatch.Repo,
   queues: [default: 5, spotify: 2, events: 2, mailers: 5],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Cron, crontab: []}
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Times are UTC. 09:00 UTC is the small hours across the US.
+       {"0 9 * * *", ConcertMatch.Workers.RefreshTasteWorker},
+       {"0 10 * * *", ConcertMatch.Workers.SweepEventsWorker}
+     ]}
   ]
 
 # Spotify stays the only OAuth provider. Credentials come from the

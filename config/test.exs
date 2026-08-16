@@ -38,6 +38,10 @@ config :concert_match, :spotify_req_options,
   plug: {Req.Test, ConcertMatch.Spotify.OAuth},
   retry: false
 
+config :concert_match, :spotify_api_req_options,
+  plug: {Req.Test, ConcertMatch.Spotify.Api},
+  retry: false
+
 config :concert_match, :ticketmaster_req_options,
   plug: {Req.Test, ConcertMatch.Events.Sources.Ticketmaster},
   retry: false
