@@ -83,8 +83,20 @@ Sent mail is viewable in development at http://127.0.0.1:4000/dev/mailbox.
 `render.yaml` is a [Render Blueprint](https://render.com/docs/blueprint-spec).
 Point Render's **New → Blueprint** flow at this repo and it creates the web
 service and a Postgres database together. You'll be prompted for the values
-marked `sync: false`: the Spotify and Ticketmaster credentials, and optionally
-`RESEND_API_KEY` / `MAIL_FROM`.
+marked `sync: false`: `SECRET_KEY_BASE`, the Spotify and Ticketmaster
+credentials, and optionally `RESEND_API_KEY` / `MAIL_FROM`.
+
+Generate the secret yourself:
+
+```sh
+mix phx.gen.secret
+```
+
+Don't use Render's "generate value" for this one. Its generated secrets are
+base64-encoded 256-bit values — 44 characters — and Plug's cookie store
+requires at least 64, so the service deploys cleanly and then 500s on the first
+request that touches a session. `config/runtime.exs` checks the length at boot
+so it fails obviously instead.
 
 Two things to do after the first deploy:
 

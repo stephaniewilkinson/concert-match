@@ -78,6 +78,20 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  # Plug's cookie store requires at least 64 bytes and raises on the first
+  # request that touches a session otherwise -- long after boot, from deep
+  # inside a stack trace. Checking here turns that into an obvious startup
+  # failure. Worth guarding because several hosts' "generate a secret for me"
+  # features produce 44 characters: base64 of 256 bits.
+  if byte_size(secret_key_base) < 64 do
+    raise """
+    SECRET_KEY_BASE is #{byte_size(secret_key_base)} bytes; at least 64 are required.
+
+    Generate a valid one with `mix phx.gen.secret` and set it directly. Do not
+    use a host's auto-generated secret unless you have checked its length.
+    """
+  end
+
   # Render supplies RENDER_EXTERNAL_HOSTNAME; PHX_HOST overrides it for a
   # custom domain or another host entirely.
   host =

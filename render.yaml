@@ -41,10 +41,18 @@ services:
           name: concert-match-db
           property: connectionString
 
-      # Render generates this once and keeps it. Regenerating it invalidates
-      # every existing session cookie.
+      # Generate with `mix phx.gen.secret` and paste it in when Render prompts.
+      #
+      # Deliberately NOT generateValue: true. Render's generated values are
+      # base64-encoded 256-bit secrets, which come out 44 characters long, and
+      # Plug's cookie store requires at least 64 -- so the service builds and
+      # boots fine and then 500s on the first request that touches a session.
+      # config/runtime.exs now checks the length at boot so this fails loudly
+      # instead.
+      #
+      # Changing this value later invalidates every existing session cookie.
       - key: SECRET_KEY_BASE
-        generateValue: true
+        sync: false
 
       # Prompted for on Blueprint creation rather than stored in this file.
       #
