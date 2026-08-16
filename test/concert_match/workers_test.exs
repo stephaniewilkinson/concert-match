@@ -136,7 +136,7 @@ defmodule ConcertMatch.WorkersTest do
       assert all_enqueued(worker: ConcertMatch.Workers.DigestWorker) == []
     end
 
-    test "re-sweeping the same shows queues nothing the second time" do
+    test "re-sweeping stops queueing once everyone has been told" do
       artist = artist_fixture(name: "Radiohead")
       user = user_fixture()
       friend = user_fixture()
@@ -147,13 +147,16 @@ defmodule ConcertMatch.WorkersTest do
       ConcertMatch.StubSource.put_events(events)
 
       perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
-      first_count = length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker))
+      assert length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker)) == 2
+
+      # Deliver, so there is nothing pending left.
+      Enum.each([user, friend], &ConcertMatch.Notifications.deliver_digest/1)
 
       ConcertMatch.StubSource.put_events(events)
       perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
 
-      # Only genuinely new shows trigger mail; a show is new once.
-      assert length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker)) == first_count
+      # Same shows, everyone already told: no more mail.
+      assert length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker)) == 2
     end
 
     test "returns an error so Oban retries a failed sweep" do

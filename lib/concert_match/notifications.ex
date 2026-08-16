@@ -68,23 +68,26 @@ defmodule ConcertMatch.Notifications do
   end
 
   @doc """
-  Queue digests for everyone affected by a batch of newly discovered events.
+  Queue a digest for everyone who has something unsent.
 
-  Called by the sweep, so mail is sent because something happened rather than
-  because a clock struck. Returns the user ids queued.
+  Called after an event sweep and after a taste import, so mail goes out
+  because something happened rather than because a clock struck. Returns the
+  user ids queued.
 
-  Jobs are inserted per user rather than per event: several new shows found in
-  one sweep should produce one email, not five.
+  Being driven by pending state rather than by a list of new events is what
+  makes a friend joining work: when their listening is first imported, shows
+  already sitting in the database can suddenly match two people, and both get
+  told. Keying off newly-swept events alone would leave those invisible until
+  each one happened to be re-announced.
+
+  One job per person, so four new matching shows produce one email listing
+  four rather than four emails.
   """
-  @spec enqueue_for_new_events([Events.Event.t()]) :: [integer()]
-  def enqueue_for_new_events([]), do: []
-
-  def enqueue_for_new_events(events) do
-    events
-    |> Events.shared_matches()
-    |> Enum.flat_map(fn %{users: users} -> Enum.map(users, & &1.user_id) end)
-    |> Enum.uniq()
-    |> Enum.filter(&notifiable?/1)
+  @spec enqueue_pending() :: [integer()]
+  def enqueue_pending do
+    digest_recipients()
+    |> Enum.filter(&(pending_digest(&1) != []))
+    |> Enum.map(& &1.id)
     |> tap(fn user_ids ->
       Enum.each(user_ids, fn user_id ->
         %{user_id: user_id}
@@ -92,13 +95,6 @@ defmodule ConcertMatch.Notifications do
         |> Oban.insert()
       end)
     end)
-  end
-
-  defp notifiable?(user_id) do
-    case Accounts.get_user(user_id) do
-      %User{notify_enabled: true, email: email} when is_binary(email) -> true
-      _ -> false
-    end
   end
 
   # Every other person named in the digest, so the email can say who's in.

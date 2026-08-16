@@ -91,14 +91,14 @@ defmodule ConcertMatch.NotificationsTest do
     end
   end
 
-  describe "enqueue_for_new_events/1" do
-    test "queues a digest for each person a new shared show concerns", ctx do
+  describe "enqueue_pending/0" do
+    test "queues a digest for each person a shared show concerns", ctx do
       user = user_fixture()
       friend = user_fixture()
       taste_fixture(user, ctx.artist, rank: 1)
       taste_fixture(friend, ctx.artist, rank: 1)
 
-      assert queued = Notifications.enqueue_for_new_events([ctx.event])
+      assert queued = Notifications.enqueue_pending()
       assert Enum.sort(queued) == Enum.sort([user.id, friend.id])
       assert length(all_enqueued(worker: DigestWorker)) == 2
     end
@@ -107,12 +107,14 @@ defmodule ConcertMatch.NotificationsTest do
       user = user_fixture()
       taste_fixture(user, ctx.artist, rank: 1)
 
-      assert Notifications.enqueue_for_new_events([ctx.event]) == []
+      assert Notifications.enqueue_pending() == []
       assert all_enqueued(worker: DigestWorker) == []
     end
 
-    test "queues nothing when nothing new was found" do
-      assert Notifications.enqueue_for_new_events([]) == []
+    test "queues nothing when nobody has matched anything" do
+      user_fixture()
+
+      assert Notifications.enqueue_pending() == []
       assert all_enqueued(worker: DigestWorker) == []
     end
 
@@ -122,7 +124,19 @@ defmodule ConcertMatch.NotificationsTest do
       taste_fixture(user, ctx.artist, rank: 1)
       taste_fixture(quiet, ctx.artist, rank: 1)
 
-      assert Notifications.enqueue_for_new_events([ctx.event]) == [user.id]
+      assert Notifications.enqueue_pending() == [user.id]
+    end
+
+    test "queues nothing once everyone has been told", ctx do
+      user = user_fixture()
+      friend = user_fixture()
+      taste_fixture(user, ctx.artist, rank: 1)
+      taste_fixture(friend, ctx.artist, rank: 1)
+
+      {:ok, 1} = Notifications.deliver_digest(user)
+      {:ok, 1} = Notifications.deliver_digest(friend)
+
+      assert Notifications.enqueue_pending() == []
     end
 
     test "one job per person, not per show", ctx do
@@ -130,16 +144,34 @@ defmodule ConcertMatch.NotificationsTest do
       friend = user_fixture()
 
       second_artist = artist_fixture(name: "Another Band")
-      second_event = event_fixture() |> lineup_fixture(second_artist)
+      event_fixture() |> lineup_fixture(second_artist)
 
       for u <- [user, friend] do
         taste_fixture(u, ctx.artist, rank: 1)
         taste_fixture(u, second_artist, rank: 2)
       end
 
-      # Two new shows concerning the same two people is two emails, not four.
-      Notifications.enqueue_for_new_events([ctx.event, second_event])
+      # Two shows concerning the same two people is two emails, not four.
+      Notifications.enqueue_pending()
       assert length(all_enqueued(worker: DigestWorker)) == 2
+    end
+
+    # The reason this is driven by pending state rather than by a list of
+    # freshly swept events: a friend joining has to surface overlaps on shows
+    # that were already sitting in the database.
+    test "a friend joining surfaces shows already stored", ctx do
+      user = user_fixture()
+      taste_fixture(user, ctx.artist, rank: 1)
+
+      # Alone, the stored show is not news.
+      assert Notifications.enqueue_pending() == []
+
+      friend = user_fixture()
+      taste_fixture(friend, ctx.artist, rank: 1)
+
+      # The moment they arrive, it is -- without the show being re-announced.
+      assert queued = Notifications.enqueue_pending()
+      assert Enum.sort(queued) == Enum.sort([user.id, friend.id])
     end
   end
 

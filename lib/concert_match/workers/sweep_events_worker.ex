@@ -29,7 +29,7 @@ defmodule ConcertMatch.Workers.SweepEventsWorker do
       {:ok, %{seen: seen, new: new}} ->
         # Mail goes out because a sweep turned something up, not because a
         # clock struck. A sweep that finds nothing shared sends nothing.
-        queued = Notifications.enqueue_for_new_events(new)
+        queued = Notifications.enqueue_pending()
 
         Logger.info(
           "swept #{lat},#{lng} r=#{radius}: #{seen} events, #{length(new)} new, " <>

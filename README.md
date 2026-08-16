@@ -4,9 +4,13 @@ Find concerts you and your friends both want to go to, and get an email when
 one is announced.
 
 Concert Match reads your Spotify listening — top artists, follows, saved
-library — and does the same for a handful of friends. When a newly announced
-show near you features an artist that two or more of you care about, everyone
-who matches gets a note saying who else is in.
+library — and does the same for a handful of friends. When a show near you
+features an artist that two or more of you care about, everyone who matches
+gets a note saying who else is in.
+
+Mail is sent when there's something to say, not on a schedule. A show that
+matches only you appears on the home page but doesn't earn an email; a quiet
+week is a silent week.
 
 Originally built in 2016 as a code-school project in Node and Express;
 rewritten in Elixir. The 2016 version is still in this repo's history.
@@ -36,9 +40,18 @@ Spotify requires the loopback IP rather than `localhost`.
 
 **Spotify caps development-mode apps at 5 authenticated users.** Extended access
 has required a registered organization with substantial monthly actives since
-May 2025, so this is a real ceiling rather than a setting. Add each friend's
-Spotify account to the app's user allowlist in the dashboard. Concert Match is
+May 2025, so this is a real ceiling rather than a setting. Concert Match is
 built for you and up to four other people, and its design leans on that.
+
+Adding someone is manual and there is no API for it: Dashboard → your app →
+Settings → User Management → Add new user, then their name and the email address
+on their Spotify account. Note that a person who *hasn't* been added can still
+complete the Spotify login — it's their API calls that come back 403 — so the
+app names the cap explicitly when that happens rather than saying "login failed".
+
+A friend can join at any point. When their listening is first imported, shows
+already sitting in the database get re-checked, so an overlap on something
+announced weeks ago still reaches both of you.
 
 Scopes used: `user-top-read`, `user-follow-read`, `user-library-read`,
 `playlist-read-private`, `user-read-email`.

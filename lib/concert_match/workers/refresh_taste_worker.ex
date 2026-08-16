@@ -11,6 +11,7 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
 
   alias ConcertMatch.Accounts
   alias ConcertMatch.Music
+  alias ConcertMatch.Notifications
 
   require Logger
 
@@ -31,7 +32,16 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
       user ->
         case Music.refresh_taste(user) do
           {:ok, count} ->
-            Logger.info("refreshed taste for user #{user_id}: #{count} rows")
+            # A new person's first import can turn shows already in the
+            # database into shared matches, so re-check rather than waiting
+            # for each one to be announced again.
+            queued = Notifications.enqueue_pending()
+
+            Logger.info(
+              "refreshed taste for user #{user_id}: #{count} rows, " <>
+                "#{length(queued)} digests queued"
+            )
+
             :ok
 
           {:error, :no_refresh_token} ->
