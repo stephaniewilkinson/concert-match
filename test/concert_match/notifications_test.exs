@@ -17,30 +17,23 @@ defmodule ConcertMatch.NotificationsTest do
   end
 
   describe "pending_digest/1" do
-    test "a show only this user matches is not shared", ctx do
+    # A show only you match is still on the home page. It is not news worth
+    # an email; the app is about going together.
+    test "a show only this user matches is not worth an email", ctx do
       user = user_fixture()
       taste_fixture(user, ctx.artist, rank: 1)
 
-      digest = Notifications.pending_digest(user)
-
-      assert digest.shared == []
-      # Falls back rather than sending nothing at all.
-      assert [%{event: event}] = digest.solo
-      assert event.id == ctx.event.id
+      assert Notifications.pending_digest(user) == []
     end
 
-    test "a show two users match is shared", ctx do
+    test "a show two users match is", ctx do
       user = user_fixture()
       friend = user_fixture()
       taste_fixture(user, ctx.artist, rank: 1)
       taste_fixture(friend, ctx.artist, rank: 1)
 
-      digest = Notifications.pending_digest(user)
-
-      assert [%{event: event}] = digest.shared
+      assert [%{event: event}] = Notifications.pending_digest(user)
       assert event.id == ctx.event.id
-      # Solo is a fallback only; it stays empty when there's something shared.
-      assert digest.solo == []
     end
 
     test "excludes shows this user has already been told about", ctx do
@@ -51,7 +44,7 @@ defmodule ConcertMatch.NotificationsTest do
 
       {:ok, 1} = Notifications.deliver_digest(user)
 
-      assert %{shared: [], solo: []} = Notifications.pending_digest(user)
+      assert Notifications.pending_digest(user) == []
     end
 
     test "a friend being told does not suppress this user's digest", ctx do
@@ -62,7 +55,7 @@ defmodule ConcertMatch.NotificationsTest do
 
       {:ok, 1} = Notifications.deliver_digest(friend)
 
-      assert %{shared: [_]} = Notifications.pending_digest(user)
+      assert [_] = Notifications.pending_digest(user)
     end
 
     test "orders by combined affinity without dropping weak matches", ctx do
@@ -78,7 +71,7 @@ defmodule ConcertMatch.NotificationsTest do
       taste_fixture(user, beloved, source: "top_long", rank: 1)
       taste_fixture(friend, beloved, source: "top_long", rank: 1)
 
-      assert %{shared: [first, second]} = Notifications.pending_digest(user)
+      assert [first, second] = Notifications.pending_digest(user)
 
       assert first.event.id == loud_event.id
       # The faint one is still here. Ranking, not filtering.
@@ -94,7 +87,59 @@ defmodule ConcertMatch.NotificationsTest do
       taste_fixture(user, ctx.artist, rank: 1)
       taste_fixture(friend, ctx.artist, rank: 1)
 
-      assert %{shared: [], solo: []} = Notifications.pending_digest(user)
+      assert Notifications.pending_digest(user) == []
+    end
+  end
+
+  describe "enqueue_for_new_events/1" do
+    test "queues a digest for each person a new shared show concerns", ctx do
+      user = user_fixture()
+      friend = user_fixture()
+      taste_fixture(user, ctx.artist, rank: 1)
+      taste_fixture(friend, ctx.artist, rank: 1)
+
+      assert queued = Notifications.enqueue_for_new_events([ctx.event])
+      assert Enum.sort(queued) == Enum.sort([user.id, friend.id])
+      assert length(all_enqueued(worker: DigestWorker)) == 2
+    end
+
+    test "queues nothing when only one person matches", ctx do
+      user = user_fixture()
+      taste_fixture(user, ctx.artist, rank: 1)
+
+      assert Notifications.enqueue_for_new_events([ctx.event]) == []
+      assert all_enqueued(worker: DigestWorker) == []
+    end
+
+    test "queues nothing when nothing new was found" do
+      assert Notifications.enqueue_for_new_events([]) == []
+      assert all_enqueued(worker: DigestWorker) == []
+    end
+
+    test "skips people who turned email off", ctx do
+      user = user_fixture()
+      quiet = user_fixture(%{notify_enabled: false})
+      taste_fixture(user, ctx.artist, rank: 1)
+      taste_fixture(quiet, ctx.artist, rank: 1)
+
+      assert Notifications.enqueue_for_new_events([ctx.event]) == [user.id]
+    end
+
+    test "one job per person, not per show", ctx do
+      user = user_fixture()
+      friend = user_fixture()
+
+      second_artist = artist_fixture(name: "Another Band")
+      second_event = event_fixture() |> lineup_fixture(second_artist)
+
+      for u <- [user, friend] do
+        taste_fixture(u, ctx.artist, rank: 1)
+        taste_fixture(u, second_artist, rank: 2)
+      end
+
+      # Two new shows concerning the same two people is two emails, not four.
+      Notifications.enqueue_for_new_events([ctx.event, second_event])
+      assert length(all_enqueued(worker: DigestWorker)) == 2
     end
   end
 
@@ -179,17 +224,13 @@ defmodule ConcertMatch.NotificationsTest do
       end)
     end
 
-    test "sends a solo digest when nothing is shared", ctx do
+    test "stays quiet when a show matches this user alone", ctx do
       user = user_fixture(%{display_name: "Steph"})
       taste_fixture(user, ctx.artist, rank: 1)
 
-      assert {:ok, 1} = Notifications.deliver_digest(user)
-
-      assert_email_sent(fn email ->
-        refute email.text_body =~ "into this too"
-        assert email.subject =~ "might want to see"
-        assert email.text_body =~ "Radiohead at the Crystal"
-      end)
+      # It's on the home page. It is not news.
+      assert {:ok, 0} = Notifications.deliver_digest(user)
+      assert_no_email_sent()
     end
 
     test "caps one night's digest at ten shows" do
@@ -205,9 +246,8 @@ defmodule ConcertMatch.NotificationsTest do
 
       assert {:ok, 10} = Notifications.deliver_digest(user)
 
-      # The trimmed shows aren't lost -- they lead tomorrow's digest.
-      assert %{shared: remaining} = Notifications.pending_digest(user)
-      assert length(remaining) == 5
+      # The trimmed shows aren't lost -- they lead the next digest.
+      assert length(Notifications.pending_digest(user)) == 5
     end
   end
 

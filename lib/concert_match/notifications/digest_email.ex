@@ -16,54 +16,40 @@ defmodule ConcertMatch.Notifications.DigestEmail do
   @doc """
   Build the digest for one user.
 
-  `names` maps user ids to display names so the body can say who else matched.
+  `matches` are shared matches only — this email exists to say "you and
+  someone else both want to see this". `names` maps user ids to display names
+  so the body can name them.
   """
-  @spec build(User.t(), %{shared: [map()], solo: [map()]}, %{integer() => String.t()}) ::
-          Swoosh.Email.t()
-  def build(%User{} = user, %{shared: shared, solo: solo}, names) do
+  @spec build(User.t(), [map()], %{integer() => String.t()}) :: Swoosh.Email.t()
+  def build(%User{} = user, matches, names) do
     new()
     |> to({user.display_name || "there", user.email})
     |> from(@from)
-    |> subject(subject_line(shared, solo))
-    |> text_body(text_body(user, shared, solo, names))
-    |> html_body(html_body(user, shared, solo, names))
+    |> subject(subject_line(matches))
+    |> text_body(text_body(user, matches, names))
+    |> html_body(html_body(user, matches, names))
   end
 
-  defp subject_line([_ | _] = shared, _solo) do
-    case length(shared) do
-      1 -> "A show you and a friend both want to see"
-      n -> "#{n} shows you and your friends both want to see"
-    end
+  defp subject_line([_one]), do: "A show you and a friend both want to see"
+  defp subject_line(matches), do: "#{length(matches)} shows you and your friends both want to see"
+
+  defp text_body(user, matches, names) do
+    Enum.join(
+      [
+        "Hi #{user.display_name || "there"},",
+        "",
+        intro(),
+        "",
+        Enum.map_join(matches, "\n\n", &text_match(&1, user.id, names)),
+        "",
+        "—",
+        "Concert Match"
+      ],
+      "\n"
+    )
   end
 
-  defp subject_line([], solo) do
-    case length(solo) do
-      1 -> "A show you might want to see"
-      n -> "#{n} shows you might want to see"
-    end
-  end
-
-  defp text_body(user, shared, solo, names) do
-    greeting = "Hi #{user.display_name || "there"},"
-
-    body =
-      if shared != [] do
-        [
-          "These just got announced, and more than one of you is into them:",
-          "",
-          Enum.map_join(shared, "\n\n", &text_match(&1, user.id, names))
-        ]
-      else
-        [
-          "Nothing matched you and a friend this time, but these are new and",
-          "look like your kind of thing:",
-          "",
-          Enum.map_join(solo, "\n\n", &text_match(&1, user.id, names))
-        ]
-      end
-
-    Enum.join([greeting, "" | body] ++ ["", "—", "Concert Match"], "\n")
-  end
+  defp intro, do: "These just got announced, and more than one of you is into them:"
 
   defp text_match(%{event: event, users: users}, user_id, names) do
     [
@@ -76,20 +62,11 @@ defmodule ConcertMatch.Notifications.DigestEmail do
     |> Enum.join("\n")
   end
 
-  defp html_body(user, shared, solo, names) do
-    matches = if shared != [], do: shared, else: solo
-
-    intro =
-      if shared != [] do
-        "These just got announced, and more than one of you is into them:"
-      else
-        "Nothing matched you and a friend this time, but these are new and look like your kind of thing:"
-      end
-
+  defp html_body(user, matches, names) do
     """
     <div style="font-family: system-ui, sans-serif; max-width: 34rem; line-height: 1.5;">
       <p>Hi #{escape(user.display_name || "there")},</p>
-      <p>#{escape(intro)}</p>
+      <p>#{escape(intro())}</p>
       #{Enum.map_join(matches, "\n", &html_match(&1, user.id, names))}
       <p style="color: #666; font-size: 0.875rem;">
         — Concert Match

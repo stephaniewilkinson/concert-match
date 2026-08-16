@@ -107,6 +107,55 @@ defmodule ConcertMatch.WorkersTest do
       assert Repo.aggregate(ConcertMatch.Events.Event, :count) == 1
     end
 
+    test "queues a digest when a sweep turns up a shared show" do
+      artist = artist_fixture(name: "Radiohead")
+      user = user_fixture()
+      friend = user_fixture()
+      taste_fixture(user, artist, rank: 1)
+      taste_fixture(friend, artist, rank: 1)
+
+      ConcertMatch.StubSource.put_events([source_event(artist_names: ["Radiohead"])])
+
+      assert :ok =
+               perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
+
+      assert length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker)) == 2
+    end
+
+    test "a sweep that finds nothing shared queues no mail" do
+      artist = artist_fixture(name: "Radiohead")
+      user = user_fixture()
+      taste_fixture(user, artist, rank: 1)
+
+      ConcertMatch.StubSource.put_events([source_event(artist_names: ["Radiohead"])])
+
+      assert :ok =
+               perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
+
+      # No news is no email. That is the point.
+      assert all_enqueued(worker: ConcertMatch.Workers.DigestWorker) == []
+    end
+
+    test "re-sweeping the same shows queues nothing the second time" do
+      artist = artist_fixture(name: "Radiohead")
+      user = user_fixture()
+      friend = user_fixture()
+      taste_fixture(user, artist, rank: 1)
+      taste_fixture(friend, artist, rank: 1)
+
+      events = [source_event(source_event_id: "same", artist_names: ["Radiohead"])]
+      ConcertMatch.StubSource.put_events(events)
+
+      perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
+      first_count = length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker))
+
+      ConcertMatch.StubSource.put_events(events)
+      perform_job(SweepEventsWorker, %{lat: 45.5, lng: -122.6, radius_miles: 50})
+
+      # Only genuinely new shows trigger mail; a show is new once.
+      assert length(all_enqueued(worker: ConcertMatch.Workers.DigestWorker)) == first_count
+    end
+
     test "returns an error so Oban retries a failed sweep" do
       ConcertMatch.StubSource.put_error(:econnrefused)
 

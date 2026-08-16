@@ -1,10 +1,14 @@
 defmodule ConcertMatch.Workers.DigestWorker do
   @moduledoc """
-  Sends one user their digest of newly announced matching shows.
+  Sends one user their digest of newly announced shared shows.
 
-  Runs after the nightly sweep. Batching a night's finds into one email rather
-  than sending per event is deliberate: the poll is nightly anyway, so nothing
-  is gained by five separate messages on a Tuesday.
+  Queued by `SweepEventsWorker` when a sweep actually turns something up, not
+  on a schedule — no news means no mail. One job per user rather than per
+  event, so a sweep that finds four matching shows sends one email listing
+  four, not four emails.
+
+  Running it with empty args fans out to everyone with something pending,
+  which is useful by hand but is not wired to cron.
   """
 
   use Oban.Worker, queue: :mailers, max_attempts: 3

@@ -33,10 +33,10 @@ config :concert_match, ConcertMatch.Mailer, adapter: Swoosh.Adapters.Local
 
 # Background jobs. Queues are sized for a handful of users, not a crowd.
 #
-# The nightly chain is separated in time rather than chained by callback:
-# taste first, then the event sweep, then digests. An hour of slack between
-# stages is far more than five users need, and it means a stalled refresh
-# delays one night's email rather than wedging the pipeline.
+# Only two scheduled jobs, and neither of them sends mail. Taste is refreshed,
+# then events are swept an hour later; the sweep queues a digest for anyone a
+# newly found show actually concerns. A quiet week is a silent week, which is
+# the intended behaviour rather than a gap.
 config :concert_match, Oban,
   repo: ConcertMatch.Repo,
   queues: [default: 5, spotify: 2, events: 2, mailers: 5],
@@ -46,8 +46,7 @@ config :concert_match, Oban,
      crontab: [
        # Times are UTC. 09:00 UTC is the small hours across the US.
        {"0 9 * * *", ConcertMatch.Workers.RefreshTasteWorker},
-       {"0 10 * * *", ConcertMatch.Workers.SweepEventsWorker},
-       {"0 11 * * *", ConcertMatch.Workers.DigestWorker}
+       {"0 10 * * *", ConcertMatch.Workers.SweepEventsWorker}
      ]}
   ]
 
