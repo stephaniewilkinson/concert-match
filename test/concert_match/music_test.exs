@@ -161,6 +161,72 @@ defmodule ConcertMatch.MusicTest do
       assert %Artist{normalized_name: "sigur ros"} = Repo.one(Artist)
     end
 
+    # Every other test here uses a handful of artists, which is why the
+    # original write survived them: it inserted artists one at a time, and a
+    # few round trips are quick anywhere. A real library is hundreds, and
+    # against a database on another host that ran past Ecto's 15-second
+    # transaction default and left the job retrying from scratch.
+    test "writes a realistically large library in a bounded number of queries" do
+      user = user_fixture()
+      artists = for i <- 1..689, do: spotify_artist("Library Artist #{i}")
+
+      stub_spotify(
+        top: %{"long_term" => Enum.take(artists, 50)},
+        followed: Enum.slice(artists, 50, 100),
+        tracks: Enum.map(Enum.slice(artists, 150, 539), &%{"track" => %{"artists" => [&1]}})
+      )
+
+      {:ok, agent} = Agent.start_link(fn -> 0 end)
+      test_pid = self()
+
+      # Telemetry handlers are global and run in whichever process emitted the
+      # event, so without this filter the count picks up every other async
+      # test's queries and the assertion is a coin flip.
+      handler = fn _event, _measure, _meta, _config ->
+        if self() == test_pid, do: Agent.update(agent, &(&1 + 1))
+      end
+
+      :telemetry.attach(
+        "query-count-#{inspect(self())}",
+        [:concert_match, :repo, :query],
+        handler,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("query-count-#{inspect(self())}") end)
+
+      assert {:ok, count} = Music.refresh_taste(user)
+      assert count == 689
+
+      queries = Agent.get(agent, & &1)
+
+      # Batched, this is a couple of statements plus the delete and the pool
+      # insert. Per-artist, it was 689 on its own.
+      assert queries < 50,
+             "expected a bounded number of queries, got #{queries} for 689 artists"
+    end
+
+    test "handles an artist appearing many times without a conflict error" do
+      user = user_fixture()
+      repeated = spotify_artist("Ubiquitous")
+
+      # Postgres refuses an ON CONFLICT DO UPDATE that touches one row twice in
+      # a single statement, so batching only works if duplicates are removed
+      # before the insert rather than left to the conflict target.
+      stub_spotify(
+        top: %{
+          "short_term" => [repeated],
+          "medium_term" => [repeated],
+          "long_term" => [repeated]
+        },
+        followed: [repeated],
+        tracks: [%{"track" => %{"artists" => [repeated]}}]
+      )
+
+      assert {:ok, 5} = Music.refresh_taste(user)
+      assert Repo.aggregate(Artist, :count) == 1
+    end
+
     test "a Spotify failure aborts rather than narrowing the pool" do
       user = user_fixture()
 

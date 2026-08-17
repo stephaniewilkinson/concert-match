@@ -26,6 +26,11 @@ defmodule ConcertMatch.Music do
   @library_weight 5
   @max_rank 50
 
+  # Ecto's default is 15 seconds. Generous here because the alternative failure
+  # mode -- a timeout part way through, then an Oban retry that redoes every
+  # Spotify call from scratch -- is far worse than a slow write.
+  @write_timeout :timer.minutes(2)
+
   @time_range_sources %{
     "short_term" => "top_short",
     "medium_term" => "top_medium",
@@ -53,8 +58,7 @@ defmodule ConcertMatch.Music do
 
     with {:ok, token, user} <- Accounts.fresh_access_token(user),
          {:ok, entries} <- collect_taste(token, on_progress) do
-      on_progress.({:saving, length(entries)})
-      write_taste(user, entries)
+      write_taste(user, entries, on_progress)
     end
   end
 
@@ -90,53 +94,95 @@ defmodule ConcertMatch.Music do
     end)
   end
 
-  defp write_taste(user, entries) do
+  # Postgres caps a statement at 65535 parameters. Artists carry six columns
+  # each, so this leaves an order of magnitude of headroom while still cutting
+  # a large library down to a couple of statements.
+  @insert_chunk_size 1_000
+
+  defp write_taste(user, entries, on_progress) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    Repo.transaction(fn ->
-      rows =
-        entries
-        |> Enum.map(fn {spotify_artist, source, rank} ->
-          artist = upsert_artist!(spotify_artist)
+    on_progress.({:saving, length(entries)})
 
-          %{
-            user_id: user.id,
-            artist_id: artist.id,
-            source: source,
-            rank: rank,
-            refreshed_at: now
-          }
+    # Deliberately outside the transaction below. Artists are a shared
+    # catalogue rather than this user's data, so writing them early is
+    # harmless if the pool write then fails, and it keeps the transaction
+    # short -- which is the whole point of this function's shape.
+    artist_ids = upsert_artists(entries, now)
+
+    rows =
+      entries
+      |> Enum.map(fn {spotify_artist, source, rank} ->
+        %{
+          user_id: user.id,
+          artist_id: Map.fetch!(artist_ids, spotify_artist["id"]),
+          source: source,
+          rank: rank,
+          refreshed_at: now
+        }
+      end)
+      # A user can follow an artist who is also in their top 50; one row per
+      # (user, artist, source) is the contract the unique index enforces.
+      |> Enum.uniq_by(&{&1.user_id, &1.artist_id, &1.source})
+
+    Repo.transaction(
+      fn ->
+        # Replace the pool wholesale rather than diffing it. An earlier version
+        # deleted rows older than this run's timestamp, which quietly did
+        # nothing when two refreshes landed inside the same second and left
+        # artists in the pool after they'd fallen out of every Spotify source.
+        Repo.delete_all(from ua in UserArtist, where: ua.user_id == ^user.id)
+
+        rows
+        |> Enum.chunk_every(@insert_chunk_size)
+        |> Enum.reduce(0, fn chunk, acc ->
+          {count, _} = Repo.insert_all(UserArtist, chunk)
+          acc + count
         end)
-        # A user can follow an artist who is also in their top 50; one row per
-        # (user, artist, source) is the contract the unique index enforces.
-        |> Enum.uniq_by(&{&1.user_id, &1.artist_id, &1.source})
-
-      # Replace the pool wholesale rather than diffing it. An earlier version
-      # deleted rows older than this run's timestamp, which quietly did nothing
-      # when two refreshes landed inside the same second and left artists in
-      # the pool after they'd fallen out of every Spotify source.
-      Repo.delete_all(from ua in UserArtist, where: ua.user_id == ^user.id)
-
-      {count, _} = Repo.insert_all(UserArtist, rows)
-
-      count
-    end)
+      end,
+      timeout: @write_timeout
+    )
   end
 
-  defp upsert_artist!(%{"id" => spotify_id, "name" => name} = spotify_artist) do
-    attrs = %{
-      spotify_id: spotify_id,
-      name: name,
-      image_url: image_url(spotify_artist)
-    }
+  # One statement per thousand artists rather than one per artist.
+  #
+  # This used to insert them one at a time, which was fine on a laptop and not
+  # fine against a database on another host: a 689-artist library meant 689
+  # sequential round trips inside a transaction, which at ordinary network
+  # latency ran past Ecto's 15-second default and left the job to time out and
+  # retry from the beginning, over and over.
+  defp upsert_artists(entries, now) do
+    entries
+    |> Enum.map(fn {spotify_artist, _source, _rank} -> spotify_artist end)
+    # Postgres refuses an ON CONFLICT DO UPDATE that would touch the same row
+    # twice in one statement, so duplicates have to go before the insert, not
+    # be left to the conflict target.
+    |> Enum.uniq_by(& &1["id"])
+    |> Enum.map(fn artist ->
+      name = artist["name"]
 
-    %Artist{}
-    |> Artist.changeset(attrs)
-    |> Repo.insert!(
-      on_conflict: {:replace, [:name, :normalized_name, :image_url, :updated_at]},
-      conflict_target: :spotify_id,
-      returning: true
-    )
+      %{
+        spotify_id: artist["id"],
+        name: name,
+        normalized_name: Name.normalize(name),
+        image_url: image_url(artist),
+        inserted_at: now,
+        updated_at: now
+      }
+    end)
+    |> Enum.chunk_every(@insert_chunk_size)
+    |> Enum.flat_map(fn chunk ->
+      {_count, returned} =
+        Repo.insert_all(Artist, chunk,
+          on_conflict: {:replace, [:name, :normalized_name, :image_url, :updated_at]},
+          conflict_target: :spotify_id,
+          returning: [:id, :spotify_id],
+          timeout: @write_timeout
+        )
+
+      returned
+    end)
+    |> Map.new(&{&1.spotify_id, &1.id})
   end
 
   defp image_url(%{"images" => [%{"url" => url} | _]}), do: url
