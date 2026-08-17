@@ -83,7 +83,6 @@ defmodule ConcertMatchWeb.HomeLiveTest do
       stages = [
         {{:top_artists, "short_term"}, "had on lately"},
         {{:top_artists, "long_term"}, "played for years"},
-        {{:following, nil}, "artists you follow"},
         {{:library, 0}, "Reading your saved library"},
         {{:saving, 340}, "Saving 340 entries"}
       ]
@@ -110,10 +109,10 @@ defmodule ConcertMatchWeb.HomeLiveTest do
       {:ok, live, html} = live(conn, ~p"/home")
       refute html =~ "Reading"
 
-      broadcast(user, {:taste_progress, {:following, nil}})
+      broadcast(user, {:taste_progress, {:library, 0}})
 
       html = render(live)
-      assert html =~ "artists you follow"
+      assert html =~ "Reading your saved library"
       assert html =~ "Importing"
     end
 

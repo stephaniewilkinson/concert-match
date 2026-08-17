@@ -2,11 +2,15 @@ defmodule ConcertMatch.Music do
   @moduledoc """
   Artists, who listens to them, and how much.
 
-  The pool is deliberately wide: the top 250 artists in each of Spotify's three
-  time windows, plus everyone you follow, plus your saved library. Matching on
-  bare membership of a short list would produce silent weeks, and an app that
-  emails you nothing is an app you forget about — so affinity is used only to
-  order results, never to gate them.
+  The pool is the top 250 artists in each of Spotify's three time windows, plus
+  the artists in your saved library. Matching on bare membership of a short
+  list would produce silent weeks, and an app that emails you nothing is an app
+  you forget about — so affinity is used only to order results, never to gate
+  them.
+
+  Followed artists are deliberately not included. Following on Spotify is a
+  cheap, often years-stale gesture, and it turned out to say much less about
+  whether someone would turn up to a gig than actually listening does.
   """
 
   import Ecto.Query, warn: false
@@ -24,14 +28,12 @@ defmodule ConcertMatch.Music do
   # affinity data there is.
   @top_artist_depth 250
 
-  # Affinity weights, all derived from the depth so they stay in proportion if
-  # it changes again. A ranked artist scores `depth + 1 - rank`, so #1 tops the
-  # scale and the last place scores 1. A follow is deliberate but carries no
-  # ordering, so it sits mid-table. Library presence is the weakest signal
+  # Affinity weights, derived from the depth so they stay in proportion if it
+  # changes again. A ranked artist scores `depth + 1 - rank`, so #1 tops the
+  # scale and the last place scores 1. Library presence is the weakest signal
   # there is -- one saved track from 2014 -- but still counts, because it
   # still counts.
   @max_rank @top_artist_depth
-  @followed_weight div(@top_artist_depth, 2) + 1
   @library_weight div(@top_artist_depth, 10)
 
   # Ecto's default is 15 seconds. Generous here because the alternative failure
@@ -74,16 +76,9 @@ defmodule ConcertMatch.Music do
   # source abort the refresh rather than silently narrowing someone's pool.
   defp collect_taste(token, on_progress) do
     with {:ok, top} <- collect_top_artists(token, on_progress),
-         on_progress.({:following, nil}),
-         {:ok, followed} <- Api.followed_artists(token),
          on_progress.({:library, 0}),
          {:ok, library} <- Api.library_artists(token, on_progress) do
-      entries =
-        top ++
-          Enum.map(followed, &{&1, "followed", nil}) ++
-          Enum.map(library, &{&1, "library", nil})
-
-      {:ok, entries}
+      {:ok, top ++ Enum.map(library, &{&1, "library", nil})}
     end
   end
 
@@ -129,7 +124,7 @@ defmodule ConcertMatch.Music do
           refreshed_at: now
         }
       end)
-      # A user can follow an artist who is also in their top 250; one row per
+      # An artist can be in the library and the top 250 both; one row per
       # (user, artist, source) is the contract the unique index enforces.
       |> Enum.uniq_by(&{&1.user_id, &1.artist_id, &1.source})
 
@@ -238,10 +233,9 @@ defmodule ConcertMatch.Music do
     sources = MapSet.new(rows, fn {_, _, source, _} -> source end)
 
     rank_score = if best_rank, do: @max_rank + 1 - best_rank, else: 0
-    follow_score = if MapSet.member?(sources, "followed"), do: @followed_weight, else: 0
     library_score = if MapSet.member?(sources, "library"), do: @library_weight, else: 0
 
-    rank_score + follow_score + library_score
+    rank_score + library_score
   end
 
   @doc """

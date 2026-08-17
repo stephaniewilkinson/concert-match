@@ -75,14 +75,6 @@ defmodule ConcertMatch.Spotify.Api do
   end
 
   @doc """
-  Every artist the user follows. Cursor-paginated rather than offset-paginated.
-  """
-  @spec followed_artists(String.t()) :: {:ok, [map()]} | {:error, term()}
-  def followed_artists(access_token) do
-    follow_cursor(access_token, nil, [], 0)
-  end
-
-  @doc """
   Distinct artists across the user's saved tracks and saved albums.
 
   `on_progress` is called with `{:library, count_so_far}` as each page lands.
@@ -136,36 +128,6 @@ defmodule ConcertMatch.Spotify.Api do
           {:ok, dedupe(acc)}
         else
           paginate(access_token, path, extract, on_progress, offset + @page_size, acc, page + 1)
-        end
-
-      {:ok, _} ->
-        {:ok, dedupe(acc)}
-
-      error ->
-        error
-    end
-  end
-
-  defp follow_cursor(_access_token, _after_id, acc, page) when page >= @max_library_pages do
-    {:ok, dedupe(acc)}
-  end
-
-  defp follow_cursor(access_token, after_id, acc, page) do
-    params = [type: "artist", limit: @page_size]
-    params = if after_id, do: Keyword.put(params, :after, after_id), else: params
-
-    case get(access_token, "/me/following", params) do
-      {:ok, %{"artists" => %{"items" => []}}} ->
-        {:ok, dedupe(acc)}
-
-      {:ok, %{"artists" => %{"items" => items} = artists}} ->
-        acc = acc ++ items
-        cursor = get_in(artists, ["cursors", "after"])
-
-        if is_nil(cursor) do
-          {:ok, dedupe(acc)}
-        else
-          follow_cursor(access_token, cursor, acc, page + 1)
         end
 
       {:ok, _} ->

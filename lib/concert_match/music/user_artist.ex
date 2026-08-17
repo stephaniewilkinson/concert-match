@@ -2,10 +2,9 @@ defmodule ConcertMatch.Music.UserArtist do
   @moduledoc """
   One reason to believe a user cares about an artist.
 
-  A single artist can produce several of these rows for one user — a top-50
-  placement in each time range, plus a follow, plus a library presence. They
-  are kept separate rather than collapsed so the affinity score can weigh
-  them, and so a shifting top-50 doesn't erase a deliberate follow.
+  A single artist can produce several of these rows for one user — a placement
+  in each of the three time ranges, plus a library presence. They are kept
+  separate rather than collapsed so the affinity score can weigh them.
   """
 
   use Ecto.Schema
@@ -14,7 +13,7 @@ defmodule ConcertMatch.Music.UserArtist do
   alias ConcertMatch.Accounts.User
   alias ConcertMatch.Music.Artist
 
-  @sources ~w(top_short top_medium top_long followed library)
+  @sources ~w(top_short top_medium top_long library)
 
   @type t :: %__MODULE__{}
 

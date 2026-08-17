@@ -15,15 +15,17 @@ defmodule ConcertMatch.Spotify.OAuth do
   @accounts_url "https://accounts.spotify.com"
   @api_url "https://api.spotify.com/v1"
 
+  # Only what's actually read. user-follow-read went when follows stopped
+  # counting, and playlist-read-private was inherited from the 2016 app's
+  # scope list and never used by anything here -- asking for a permission you
+  # don't exercise is just a worse consent screen.
   @scopes ~w(
     user-top-read
-    user-follow-read
     user-library-read
-    playlist-read-private
     user-read-email
   )
 
-  @doc "The scopes this app requests. Widening the taste pool is the point."
+  @doc "The scopes this app requests."
   def scopes, do: @scopes
 
   @doc """

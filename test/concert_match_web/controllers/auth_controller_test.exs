@@ -40,12 +40,10 @@ defmodule ConcertMatchWeb.AuthControllerTest do
       assert params["state"] == get_session(conn, :spotify_oauth_state)
       assert params["state"] != nil
 
-      # The wide taste pool depends on these being granted up front.
-      scopes = String.split(params["scope"], " ")
-      assert "user-top-read" in scopes
-      assert "user-follow-read" in scopes
-      assert "user-library-read" in scopes
-      assert "user-read-email" in scopes
+      # Exactly what's read, and nothing else. Asking for a permission the app
+      # never exercises is just a worse consent screen.
+      scopes = params["scope"] |> String.split(" ") |> Enum.sort()
+      assert scopes == ["user-library-read", "user-read-email", "user-top-read"]
     end
 
     test "issues a different state each time", %{conn: conn} do

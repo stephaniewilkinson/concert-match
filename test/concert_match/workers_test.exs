@@ -22,9 +22,6 @@ defmodule ConcertMatch.WorkersTest do
           "/v1/me/top/artists" ->
             Req.Test.json(conn, %{"items" => [spotify_artist("Radiohead")]})
 
-          "/v1/me/following" ->
-            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
-
           _ ->
             Req.Test.json(conn, %{"items" => [], "next" => nil})
         end
@@ -74,9 +71,6 @@ defmodule ConcertMatch.WorkersTest do
 
       Req.Test.stub(Api, fn conn ->
         case conn.request_path do
-          "/v1/me/following" ->
-            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
-
           _ ->
             Req.Test.json(conn, %{"items" => [], "next" => nil})
         end

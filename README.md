@@ -4,13 +4,16 @@ Find concerts you and your friends both want to go to, and get an email when
 one is announced.
 
 Concert Match reads your Spotify listening — your top 250 artists in each of
-three time windows, everyone you follow, and your saved library — and does the
-same for a handful of friends. When a show near you features an artist that two
-or more of you care about, everyone who matches gets a note saying who else is
-in.
+three time windows, plus your saved library — and does the same for a handful
+of friends. When a show near you features an artist that two or more of you
+care about, everyone who matches gets a note saying who else is in.
 
 Matching is deliberately wide: any overlap counts. Affinity only decides the
 order things appear in, never whether they appear at all.
+
+Followed artists deliberately don't count. Nobody unfollows a band, so a follow
+is often years stale and says much less about whether you'd cross town for a
+gig than actually listening does.
 
 Mail is sent when there's something to say, not on a schedule. A show that
 matches only you appears on the home page but doesn't earn an email; a quiet
@@ -57,8 +60,8 @@ A friend can join at any point. When their listening is first imported, shows
 already sitting in the database get re-checked, so an overlap on something
 announced weeks ago still reaches both of you.
 
-Scopes used: `user-top-read`, `user-follow-read`, `user-library-read`,
-`playlist-read-private`, `user-read-email`.
+Scopes used: `user-top-read`, `user-library-read`, `user-read-email` — exactly
+what's read, and nothing else.
 
 ### Ticketmaster
 

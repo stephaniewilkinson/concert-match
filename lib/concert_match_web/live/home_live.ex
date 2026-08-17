@@ -71,7 +71,6 @@ defmodule ConcertMatchWeb.HomeLive do
   defp describe({:top_artists, "short_term"}), do: "Reading what you've had on lately…"
   defp describe({:top_artists, "medium_term"}), do: "Reading the last few months…"
   defp describe({:top_artists, "long_term"}), do: "Reading what you've played for years…"
-  defp describe({:following, _}), do: "Reading the artists you follow…"
 
   defp describe({:library, 0}), do: "Reading your saved library…"
 
@@ -151,8 +150,8 @@ defmodule ConcertMatchWeb.HomeLive do
               <h2 class="card-title">Import your listening</h2>
               <p class="opacity-80">
                 Concert Match needs to know what you listen to before it can match you
-                with anyone. This reads your top artists, the artists you follow, and
-                your saved library from Spotify.
+                with anyone. This reads your top 250 artists from each of Spotify's
+                three time windows, plus your saved library.
               </p>
               <p :if={@importing?} class="mt-2 text-sm opacity-60">
                 This can take a minute if your library is large. You can leave the page;

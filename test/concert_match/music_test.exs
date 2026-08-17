@@ -9,10 +9,11 @@ defmodule ConcertMatch.MusicTest do
   alias ConcertMatch.Music.UserArtist
   alias ConcertMatch.Spotify.Api
 
-  # One stub covering every taste endpoint the refresh touches.
+  # One stub covering every taste endpoint the refresh touches. A request to
+  # /me/following would raise here, which is the point: nothing should ask for
+  # follows any more.
   defp stub_spotify(opts) do
     top = Keyword.get(opts, :top, %{})
-    followed = Keyword.get(opts, :followed, [])
     tracks = Keyword.get(opts, :tracks, [])
     albums = Keyword.get(opts, :albums, [])
 
@@ -23,9 +24,6 @@ defmodule ConcertMatch.MusicTest do
         "/v1/me/top/artists" ->
           range = conn.query_params["time_range"]
           Req.Test.json(conn, %{"items" => Map.get(top, range, [])})
-
-        "/v1/me/following" ->
-          Req.Test.json(conn, %{"artists" => %{"items" => followed, "cursors" => %{}}})
 
         "/v1/me/tracks" ->
           Req.Test.json(conn, %{"items" => tracks, "next" => nil})
@@ -58,20 +56,41 @@ defmodule ConcertMatch.MusicTest do
       assert Enum.sort(sources) == ["top_long", "top_medium", "top_short"]
     end
 
-    test "stores follows and library alongside top artists" do
+    test "stores library artists alongside top artists" do
       user = user_fixture()
 
       stub_spotify(
         top: %{"long_term" => [spotify_artist("Top Artist")]},
-        followed: [spotify_artist("Followed Artist")],
         tracks: [saved_track("Track Artist")],
         albums: [saved_album("Album Artist")]
       )
 
-      assert {:ok, 4} = Music.refresh_taste(user)
+      assert {:ok, 3} = Music.refresh_taste(user)
 
       sources = Repo.all(from ua in UserArtist, select: ua.source)
-      assert Enum.sort(sources) == ["followed", "library", "library", "top_long"]
+      assert Enum.sort(sources) == ["library", "library", "top_long"]
+    end
+
+    # Following is a cheap, often years-stale gesture -- nobody unfollows a
+    # band -- so it said much less about turning up to a gig than listening
+    # does. Not fetched, and the scope isn't requested either.
+    test "never asks Spotify who you follow" do
+      user = user_fixture()
+      test_pid = self()
+
+      Req.Test.stub(Api, fn conn ->
+        send(test_pid, {:path, conn.request_path})
+        conn = Plug.Conn.fetch_query_params(conn)
+
+        case conn.request_path do
+          "/v1/me/top/artists" -> Req.Test.json(conn, %{"items" => []})
+          _ -> Req.Test.json(conn, %{"items" => [], "next" => nil})
+        end
+      end)
+
+      {:ok, _} = Music.refresh_taste(user)
+
+      refute_received {:path, "/v1/me/following"}
     end
 
     test "one artist reached by several routes gets a row per route" do
@@ -80,16 +99,15 @@ defmodule ConcertMatch.MusicTest do
 
       stub_spotify(
         top: %{"short_term" => [artist], "long_term" => [artist]},
-        followed: [artist],
         tracks: [%{"track" => %{"artists" => [artist]}}]
       )
 
-      assert {:ok, 4} = Music.refresh_taste(user)
+      assert {:ok, 3} = Music.refresh_taste(user)
 
-      # Four reasons to believe, one artist. Keeping them apart is what lets
-      # a follow survive an artist dropping out of the top 50.
+      # Three reasons to believe, one artist. Keeping them apart is what lets
+      # a library presence survive an artist dropping out of the top 250.
       assert Repo.aggregate(Artist, :count) == 1
-      assert Repo.aggregate(UserArtist, :count) == 4
+      assert Repo.aggregate(UserArtist, :count) == 3
     end
 
     # Spotify caps limit at 50, so anything deeper has to be paged. A stub that
@@ -113,9 +131,6 @@ defmodule ConcertMatch.MusicTest do
             next = if offset + limit < length(catalogue), do: "http://next", else: nil
 
             Req.Test.json(conn, %{"items" => items, "next" => next, "total" => 250})
-
-          "/v1/me/following" ->
-            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
 
           _ ->
             Req.Test.json(conn, %{"items" => [], "next" => nil})
@@ -153,9 +168,6 @@ defmodule ConcertMatch.MusicTest do
             else
               Req.Test.json(conn, %{"items" => [], "next" => nil})
             end
-
-          "/v1/me/following" ->
-            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
 
           _ ->
             Req.Test.json(conn, %{"items" => [], "next" => nil})
@@ -270,8 +282,7 @@ defmodule ConcertMatch.MusicTest do
 
       stub_spotify(
         top: %{"long_term" => Enum.take(artists, 50)},
-        followed: Enum.slice(artists, 50, 100),
-        tracks: Enum.map(Enum.slice(artists, 150, 539), &%{"track" => %{"artists" => [&1]}})
+        tracks: Enum.map(Enum.slice(artists, 50, 639), &%{"track" => %{"artists" => [&1]}})
       )
 
       {:ok, agent} = Agent.start_link(fn -> 0 end)
@@ -317,11 +328,10 @@ defmodule ConcertMatch.MusicTest do
           "medium_term" => [repeated],
           "long_term" => [repeated]
         },
-        followed: [repeated],
         tracks: [%{"track" => %{"artists" => [repeated]}}]
       )
 
-      assert {:ok, 5} = Music.refresh_taste(user)
+      assert {:ok, 4} = Music.refresh_taste(user)
       assert Repo.aggregate(Artist, :count) == 1
     end
 
@@ -375,16 +385,11 @@ defmodule ConcertMatch.MusicTest do
       assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 249
     end
 
-    test "adds the follow weight on top of a rank", ctx do
+    test "adds the library weight on top of a rank", ctx do
       taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 1)
-      taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
+      taste_fixture(ctx.user, ctx.artist, source: "library", rank: nil)
 
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 250 + 126
-    end
-
-    test "scores a follow mid-table", ctx do
-      taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 126
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 250 + 25
     end
 
     test "scores library presence lowest, but above nothing", ctx do
@@ -392,25 +397,42 @@ defmodule ConcertMatch.MusicTest do
       assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 25
     end
 
-    test "ranks a deliberate follow above a genuinely tail-end placement", ctx do
-      other = artist_fixture(name: "Barely Charted")
-      taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
-      taste_fixture(ctx.user, other, source: "top_long", rank: 240)
+    test "ranks a listened-to artist above a library-only one", ctx do
+      other = artist_fixture(name: "One Saved Track")
+      taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 200)
+      taste_fixture(ctx.user, other, source: "library", rank: nil)
 
       scores = Music.affinity_for_user(ctx.user)
       assert scores[ctx.artist.id] > scores[other.id]
     end
 
-    # Reading 250 deep rather than 50 changes what "tail end" means. #48 used
-    # to be near the bottom of the list and now sits in the top fifth, so it
-    # outranks a follow -- which is the point of reading deeper.
-    test "a top-50 placement now outranks a bare follow", ctx do
-      other = artist_fixture(name: "Solidly Charted")
-      taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
-      taste_fixture(ctx.user, other, source: "top_long", rank: 48)
+    test "a genuinely tail-end placement still scores below the library floor", ctx do
+      other = artist_fixture(name: "One Saved Track")
+      taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 240)
+      taste_fixture(ctx.user, other, source: "library", rank: nil)
 
+      # The bottom tenth of a 250-long list is faint enough that owning a
+      # record beats it. Both still match; this only decides the order.
       scores = Music.affinity_for_user(ctx.user)
       assert scores[other.id] > scores[ctx.artist.id]
+    end
+
+    test "a followed row left over from an older import scores nothing extra", ctx do
+      # The migration clears these, but a row that somehow survived must not
+      # quietly keep contributing a weight that no longer exists.
+      taste_fixture(ctx.user, ctx.artist, source: "library", rank: nil)
+
+      ConcertMatch.Repo.insert_all("user_artists", [
+        %{
+          user_id: ctx.user.id,
+          artist_id: ctx.artist.id,
+          source: "followed",
+          rank: nil,
+          refreshed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        }
+      ])
+
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 25
     end
   end
 
