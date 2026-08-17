@@ -53,6 +53,36 @@ defmodule ConcertMatch.AccountsTest do
       assert is_nil(user.avatar_url)
     end
 
+    # Ecto's :string is varchar(255), and a real Spotify access token is much
+    # longer than that. The first version of the schema used :string here, so
+    # every login in production died with 22001 string_data_right_truncation.
+    test "stores a realistically long access token" do
+      long_token = String.duplicate("a", 700)
+
+      assert {:ok, user} =
+               Accounts.upsert_from_spotify(
+                 spotify_profile(),
+                 spotify_tokens(%{"access_token" => long_token})
+               )
+
+      assert user.access_token == long_token
+      assert Repo.get!(User, user.id).access_token == long_token
+    end
+
+    test "stores a long refresh token and avatar URL" do
+      long_refresh = String.duplicate("r", 400)
+      long_avatar = "https://i.scdn.co/image/" <> String.duplicate("b", 400)
+
+      assert {:ok, user} =
+               Accounts.upsert_from_spotify(
+                 spotify_profile(%{"images" => [%{"url" => long_avatar}]}),
+                 spotify_tokens(%{"refresh_token" => long_refresh})
+               )
+
+      assert user.refresh_token == long_refresh
+      assert user.avatar_url == long_avatar
+    end
+
     test "keeps the existing refresh token when Spotify omits one" do
       {:ok, first} = Accounts.upsert_from_spotify(spotify_profile(), spotify_tokens())
       assert first.refresh_token == "new-refresh-token"

@@ -63,6 +63,24 @@ defmodule ConcertMatch.EventsTest do
       assert Repo.all(from ea in "event_artists", select: ea.artist_id) == []
     end
 
+    # Ticketmaster URLs carry tracking parameters and run long, as do their
+    # image URLs and the billed event names. These columns were varchar(255)
+    # until a Spotify token of the same shape broke login in production.
+    test "stores a long event name, URL, and image URL" do
+      long_url = "https://www.ticketmaster.com/event/" <> String.duplicate("x", 500)
+      long_name = String.duplicate("Very Long Billed Show Name ", 20)
+
+      assert {:ok, %{new: [event]}} =
+               Events.ingest([
+                 source_event(name: long_name, url: long_url, image_url: long_url)
+               ])
+
+      reloaded = Repo.get!(Event, event.id)
+      assert reloaded.name == long_name
+      assert reloaded.url == long_url
+      assert reloaded.image_url == long_url
+    end
+
     test "a multi-artist lineup links every artist we know" do
       a = artist_fixture(name: "Wilco")
       b = artist_fixture(name: "Sleater-Kinney")
