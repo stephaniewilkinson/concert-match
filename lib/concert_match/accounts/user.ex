@@ -23,6 +23,11 @@ defmodule ConcertMatch.Accounts.User do
     field :refresh_token, :string
     field :token_expires_at, :utc_datetime
 
+    # What the user types. The coordinates below are derived from it by
+    # geocoding on save; the event sweep and any future map work in those.
+    field :postal_code, :string
+    field :postal_place, :string
+
     field :home_lat, :float
     field :home_lng, :float
     field :radius_miles, :integer, default: 50
@@ -96,13 +101,38 @@ defmodule ConcertMatch.Accounts.User do
   """
   def settings_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :home_lat, :home_lng, :radius_miles, :notify_enabled])
+    |> cast(attrs, [
+      :email,
+      :postal_code,
+      :postal_place,
+      :home_lat,
+      :home_lng,
+      :radius_miles,
+      :notify_enabled
+    ])
+    |> normalize_postal_code()
     |> validate_number(:home_lat, greater_than_or_equal_to: -90, less_than_or_equal_to: 90)
     |> validate_number(:home_lng, greater_than_or_equal_to: -180, less_than_or_equal_to: 180)
     |> validate_number(:radius_miles, greater_than: 0, less_than_or_equal_to: 500)
     |> normalize_email()
     |> validate_email()
     |> validate_email_present_when_notifying()
+  end
+
+  # Formatting only. Whether the code exists is the geocoder's business, not a
+  # regex's -- postal code formats vary enough that a strict pattern would
+  # reject real places.
+  defp normalize_postal_code(changeset) do
+    case get_change(changeset, :postal_code) do
+      nil ->
+        changeset
+
+      code ->
+        case String.trim(code) do
+          "" -> put_change(changeset, :postal_code, nil)
+          trimmed -> put_change(changeset, :postal_code, String.upcase(trimmed))
+        end
+    end
   end
 
   defp normalize_email(changeset) do

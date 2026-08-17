@@ -2,8 +2,8 @@ defmodule ConcertMatchWeb.SettingsLive do
   @moduledoc """
   Where you live, how far you'll travel, and whether to email you.
 
-  The home location is load-bearing: event sweeps are driven by the distinct
-  set of user locations, so a user without one matches nothing.
+  The postal code is load-bearing: event sweeps are driven by the distinct set
+  of user locations, so a user without one matches nothing.
   """
 
   use ConcertMatchWeb, :live_view
@@ -35,24 +35,20 @@ defmodule ConcertMatchWeb.SettingsLive do
          socket
          |> assign(current_user: user)
          |> assign_form(Accounts.change_settings(user))
-         |> put_flash(:info, "Settings saved.")}
+         |> put_flash(:info, saved_message(user))}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
   end
 
-  # Sent by the geolocation hook after the browser resolves coordinates.
-  def handle_event("set_location", %{"lat" => lat, "lng" => lng}, socket) do
-    params = %{"home_lat" => lat, "home_lng" => lng}
+  # Naming the place the postal code resolved to is the confirmation that it
+  # went somewhere sensible. "Saved" alone would hide a typo that happens to
+  # be a real code in another state.
+  defp saved_message(%{postal_place: nil}), do: "Settings saved."
 
-    changeset =
-      socket.assigns.current_user
-      |> Accounts.change_settings(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign_form(socket, changeset)}
-  end
+  defp saved_message(%{postal_place: place}),
+    do: "Settings saved. Looking for shows near #{place}."
 
   defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(changeset, as: "user"))
@@ -81,25 +77,17 @@ defmodule ConcertMatchWeb.SettingsLive do
             </p>
           </fieldset>
 
-          <fieldset class="space-y-4">
+          <fieldset class="space-y-2">
             <legend class="font-semibold">Where you're looking for shows</legend>
 
-            <div id="geolocate" phx-hook="Geolocate">
-              <button type="button" class="btn btn-sm" phx-click={JS.dispatch("cm:geolocate")}>
-                Use my current location
-              </button>
-            </div>
-
             <div class="grid grid-cols-2 gap-4">
-              <.input field={@form[:home_lat]} type="number" step="any" label="Latitude" />
-              <.input field={@form[:home_lng]} type="number" step="any" label="Longitude" />
+              <.input field={@form[:postal_code]} type="text" label="ZIP code" />
+              <.input field={@form[:radius_miles]} type="number" label="Within (miles)" />
             </div>
 
-            <.input
-              field={@form[:radius_miles]}
-              type="number"
-              label="Search radius (miles)"
-            />
+            <p :if={@current_user.postal_place} class="text-sm opacity-60">
+              Currently searching near {@current_user.postal_place}.
+            </p>
           </fieldset>
 
           <fieldset>
@@ -110,7 +98,7 @@ defmodule ConcertMatchWeb.SettingsLive do
             />
           </fieldset>
 
-          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="submit" phx-disable-with="Saving…" class="btn btn-primary">Save</button>
         </.form>
       </div>
     </Layouts.app>

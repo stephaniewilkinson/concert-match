@@ -46,6 +46,10 @@ config :concert_match, :ticketmaster_req_options,
   plug: {Req.Test, ConcertMatch.Events.Sources.Ticketmaster},
   retry: false
 
+config :concert_match, :geocoding_req_options,
+  plug: {Req.Test, ConcertMatch.Geocoding.Zippopotam},
+  retry: false
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

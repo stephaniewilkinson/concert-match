@@ -6,6 +6,7 @@ defmodule ConcertMatch.Accounts do
   import Ecto.Query, warn: false
 
   alias ConcertMatch.Accounts.User
+  alias ConcertMatch.Geocoding
   alias ConcertMatch.Repo
   alias ConcertMatch.Spotify.OAuth
 
@@ -94,8 +95,54 @@ defmodule ConcertMatch.Accounts do
     end
   end
 
+  @doc """
+  Save settings, geocoding the postal code if it changed.
+
+  The lookup happens here rather than in the changeset because it's a network
+  call, and a changeset that reaches out to the internet is a changeset you
+  can't reason about or test in isolation. Coordinates are only touched when
+  the postal code actually changes, so saving an email doesn't re-geocode.
+  """
   def update_settings(%User{} = user, attrs) do
-    user |> User.settings_changeset(attrs) |> Repo.update()
+    changeset = User.settings_changeset(user, attrs)
+
+    case resolve_postal_code(changeset) do
+      {:ok, changeset} -> Repo.update(changeset)
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp resolve_postal_code(changeset) do
+    case Ecto.Changeset.get_change(changeset, :postal_code) do
+      nil ->
+        {:ok, changeset}
+
+      code ->
+        case Geocoding.lookup(code) do
+          {:ok, place} ->
+            {:ok,
+             changeset
+             |> Ecto.Changeset.put_change(:home_lat, place.lat)
+             |> Ecto.Changeset.put_change(:home_lng, place.lng)
+             |> Ecto.Changeset.put_change(:postal_place, place.place)}
+
+          {:error, :not_found} ->
+            {:error,
+             changeset
+             |> Ecto.Changeset.add_error(:postal_code, "isn't a postal code we can find")
+             |> Map.put(:action, :update)}
+
+          # Not the user's fault, so don't tell them their input is wrong.
+          {:error, _reason} ->
+            {:error,
+             changeset
+             |> Ecto.Changeset.add_error(
+               :postal_code,
+               "couldn't be looked up just now — try again in a moment"
+             )
+             |> Map.put(:action, :update)}
+        end
+    end
   end
 
   def change_settings(%User{} = user, attrs \\ %{}) do

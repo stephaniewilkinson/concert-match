@@ -5,10 +5,41 @@ defmodule ConcertMatchWeb.SettingsLiveTest do
   import ConcertMatch.AccountsFixtures
 
   alias ConcertMatch.Accounts
+  alias ConcertMatch.Geocoding.Zippopotam
 
   setup %{conn: conn} do
     user = user_fixture(%{email: "from-spotify@example.com", display_name: "Steph"})
     %{conn: init_test_session(conn, user_id: user.id), user: user}
+  end
+
+  # Zippopotam's real response shape, so the parser is exercised rather than
+  # bypassed.
+  defp stub_place(name, state, lat, lng) do
+    Req.Test.stub(Zippopotam, fn conn ->
+      Req.Test.json(conn, %{
+        "post code" => "10001",
+        "places" => [
+          %{
+            "place name" => name,
+            "state" => state,
+            "latitude" => to_string(lat),
+            "longitude" => to_string(lng)
+          }
+        ]
+      })
+    end)
+  end
+
+  defp stub_unknown_postal_code do
+    Req.Test.stub(Zippopotam, fn conn ->
+      conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{})
+    end)
+  end
+
+  defp stub_geocoder_down do
+    Req.Test.stub(Zippopotam, fn conn ->
+      conn |> Plug.Conn.put_status(503) |> Req.Test.json(%{})
+    end)
   end
 
   describe "email" do
@@ -65,42 +96,91 @@ defmodule ConcertMatchWeb.SettingsLiveTest do
     end
   end
 
-  describe "location and radius" do
-    test "saves a home location", %{conn: conn, user: user} do
+  describe "location" do
+    test "asks for a ZIP code, not coordinates", %{conn: conn} do
+      {:ok, _live, html} = live(conn, ~p"/settings")
+
+      assert html =~ "ZIP code"
+      # Nobody knows their own latitude.
+      refute html =~ "Latitude"
+      refute html =~ "Longitude"
+    end
+
+    test "saves a ZIP and geocodes it to coordinates", %{conn: conn, user: user} do
+      stub_place("New York", "New York", 40.7128, -74.006)
+
       {:ok, live, _html} = live(conn, ~p"/settings")
 
       live
-      |> form("form", user: %{home_lat: "40.7128", home_lng: "-74.0060", radius_miles: "25"})
+      |> form("form", user: %{postal_code: "10001", radius_miles: "25"})
       |> render_submit()
 
       reloaded = Accounts.get_user!(user.id)
+      assert reloaded.postal_code == "10001"
+      assert reloaded.postal_place == "New York, New York"
       assert_in_delta reloaded.home_lat, 40.7128, 0.0001
       assert_in_delta reloaded.home_lng, -74.006, 0.0001
       assert reloaded.radius_miles == 25
     end
 
-    test "rejects coordinates off the planet", %{conn: conn} do
+    test "names the place it resolved to", %{conn: conn} do
+      stub_place("New York", "New York", 40.7128, -74.006)
+
       {:ok, live, _html} = live(conn, ~p"/settings")
 
-      html =
-        live
-        |> form("form", user: %{home_lat: "999"})
-        |> render_submit()
+      html = live |> form("form", user: %{postal_code: "10001"}) |> render_submit()
 
-      assert html =~ "must be less than or equal to 90"
+      # A typo that happens to be a real code somewhere else is only visible
+      # if the resolved place is shown back.
+      assert html =~ "New York, New York"
     end
 
-    # Sent by the Geolocate JS hook once the browser resolves coordinates.
-    # Uses somewhere far from the fixture's default so a pass can't be the
-    # fixture value being mistaken for the hook's.
-    test "the geolocation hook fills the form without saving", %{conn: conn, user: user} do
+    test "reports a ZIP that doesn't exist", %{conn: conn, user: user} do
+      stub_unknown_postal_code()
+
       {:ok, live, _html} = live(conn, ~p"/settings")
 
-      html = render_hook(live, "set_location", %{"lat" => 51.5074, "lng" => -0.1278})
+      html = live |> form("form", user: %{postal_code: "00000"}) |> render_submit()
 
-      assert html =~ "51.5074"
-      # Filled in, not committed -- the user still has to press Save.
-      assert_in_delta Accounts.get_user!(user.id).home_lat, 45.5231, 0.0001
+      assert html =~ "isn&#39;t a postal code we can find"
+      assert is_nil(Accounts.get_user!(user.id).postal_code)
+    end
+
+    test "distinguishes a broken geocoder from a bad ZIP", %{conn: conn} do
+      stub_geocoder_down()
+
+      {:ok, live, _html} = live(conn, ~p"/settings")
+
+      html = live |> form("form", user: %{postal_code: "97214"}) |> render_submit()
+
+      # The service being down is not the user's mistake, so don't tell them
+      # their input is wrong.
+      assert html =~ "try again in a moment"
+      refute html =~ "isn&#39;t a postal code"
+    end
+
+    test "uppercases and trims", %{conn: conn, user: user} do
+      stub_place("Ottawa", "Ontario", 45.4215, -75.6972)
+
+      {:ok, live, _html} = live(conn, ~p"/settings")
+
+      live |> form("form", user: %{postal_code: "  k1a 0b1 "}) |> render_submit()
+
+      assert Accounts.get_user!(user.id).postal_code == "K1A 0B1"
+    end
+
+    test "saving other settings does not re-geocode", %{conn: conn, user: user} do
+      stub_place("New York", "New York", 40.7128, -74.006)
+      {:ok, live, _html} = live(conn, ~p"/settings")
+      live |> form("form", user: %{postal_code: "10001"}) |> render_submit()
+
+      # If an unchanged postal code were re-resolved, this error would surface.
+      stub_geocoder_down()
+      live |> form("form", user: %{email: "new@example.com"}) |> render_submit()
+
+      reloaded = Accounts.get_user!(user.id)
+      assert reloaded.email == "new@example.com"
+      assert_in_delta reloaded.home_lat, 40.7128, 0.0001
     end
   end
 
