@@ -19,21 +19,58 @@ defmodule ConcertMatch.Spotify.Api do
   @max_library_pages 40
 
   @doc """
-  Top artists for one time range.
+  Top artists for one time range, in rank order.
+
+  Spotify caps `limit` at 50, so anything deeper is paged with `offset`. Fewer
+  than `want` may come back: `total` is whatever Spotify's affinity data
+  actually holds for that person and window, and a new account or a short
+  window will simply have less.
 
   Spotify documents the ordering only as "based on calculated affinity" — there
   is no published play threshold, and rank is meaningful within a user rather
   than across them. Position is returned so it can be used for sorting, which
   is all it can honestly support.
   """
-  @spec top_artists(String.t(), String.t()) :: {:ok, [map()]} | {:error, term()}
-  def top_artists(access_token, time_range)
+  @spec top_artists(String.t(), String.t(), pos_integer()) ::
+          {:ok, [map()]} | {:error, term()}
+  def top_artists(access_token, time_range, want \\ 50)
       when time_range in ~w(short_term medium_term long_term) do
-    get(access_token, "/me/top/artists", limit: @page_size, time_range: time_range)
-    |> case do
-      {:ok, %{"items" => items}} -> {:ok, items}
-      {:ok, _} -> {:ok, []}
-      error -> error
+    page_top_artists(access_token, time_range, want, 0, [])
+  end
+
+  defp page_top_artists(access_token, time_range, want, offset, acc) do
+    remaining = want - length(acc)
+
+    if remaining <= 0 do
+      {:ok, acc}
+    else
+      params = [
+        limit: min(remaining, @page_size),
+        offset: offset,
+        time_range: time_range
+      ]
+
+      case get(access_token, "/me/top/artists", params) do
+        {:ok, %{"items" => []}} ->
+          {:ok, acc}
+
+        {:ok, %{"items" => items} = body} ->
+          acc = acc ++ items
+
+          # Stop on the last page rather than requesting an empty one. Ranking
+          # depends on order, so pages must be appended in sequence.
+          if is_nil(body["next"]) do
+            {:ok, acc}
+          else
+            page_top_artists(access_token, time_range, want, offset + length(items), acc)
+          end
+
+        {:ok, _} ->
+          {:ok, acc}
+
+        error ->
+          error
+      end
     end
   end
 

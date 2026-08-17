@@ -92,6 +92,104 @@ defmodule ConcertMatch.MusicTest do
       assert Repo.aggregate(UserArtist, :count) == 4
     end
 
+    # Spotify caps limit at 50, so anything deeper has to be paged. A stub that
+    # answers every request with the same page would let a broken pager pass,
+    # so this one serves real slices and asserts the offsets requested.
+    test "pages 250 deep through each time range" do
+      user = user_fixture()
+      catalogue = for i <- 1..250, do: spotify_artist("Ranked #{i}")
+      test_pid = self()
+
+      Req.Test.stub(Api, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+
+        case conn.request_path do
+          "/v1/me/top/artists" ->
+            offset = String.to_integer(conn.query_params["offset"] || "0")
+            limit = String.to_integer(conn.query_params["limit"])
+            send(test_pid, {:page, conn.query_params["time_range"], offset, limit})
+
+            items = Enum.slice(catalogue, offset, limit)
+            next = if offset + limit < length(catalogue), do: "http://next", else: nil
+
+            Req.Test.json(conn, %{"items" => items, "next" => next, "total" => 250})
+
+          "/v1/me/following" ->
+            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
+
+          _ ->
+            Req.Test.json(conn, %{"items" => [], "next" => nil})
+        end
+      end)
+
+      assert {:ok, count} = Music.refresh_taste(user)
+
+      # 250 per window, and the same catalogue in all three, so one row per
+      # artist per window.
+      assert count == 750
+
+      # Five pages of 50 for each of the three windows.
+      for range <- ~w(short_term medium_term long_term),
+          offset <- [0, 50, 100, 150, 200] do
+        assert_received {:page, ^range, ^offset, 50}
+      end
+    end
+
+    test "keeps rank ordering across page boundaries" do
+      user = user_fixture()
+      catalogue = for i <- 1..120, do: spotify_artist("Ranked #{i}")
+
+      Req.Test.stub(Api, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+
+        case conn.request_path do
+          "/v1/me/top/artists" ->
+            if conn.query_params["time_range"] == "long_term" do
+              offset = String.to_integer(conn.query_params["offset"] || "0")
+              limit = String.to_integer(conn.query_params["limit"])
+              items = Enum.slice(catalogue, offset, limit)
+              next = if offset + limit < length(catalogue), do: "http://next", else: nil
+              Req.Test.json(conn, %{"items" => items, "next" => next})
+            else
+              Req.Test.json(conn, %{"items" => [], "next" => nil})
+            end
+
+          "/v1/me/following" ->
+            Req.Test.json(conn, %{"artists" => %{"items" => [], "cursors" => %{}}})
+
+          _ ->
+            Req.Test.json(conn, %{"items" => [], "next" => nil})
+        end
+      end)
+
+      {:ok, _} = Music.refresh_taste(user)
+
+      ranks =
+        Repo.all(
+          from ua in UserArtist,
+            join: a in Artist,
+            on: a.id == ua.artist_id,
+            where: ua.rank in [1, 50, 51, 120],
+            select: {a.name, ua.rank}
+        )
+        |> Map.new(fn {name, rank} -> {rank, name} end)
+
+      # Rank has to keep counting across the page seam rather than restarting.
+      assert ranks[1] == "Ranked 1"
+      assert ranks[50] == "Ranked 50"
+      assert ranks[51] == "Ranked 51"
+      assert ranks[120] == "Ranked 120"
+    end
+
+    test "takes fewer than 250 when that's all Spotify has" do
+      user = user_fixture()
+
+      stub_spotify(top: %{"long_term" => for(i <- 1..12, do: spotify_artist("Small #{i}"))})
+
+      # A new account, or a short window, simply has less. Not an error.
+      assert {:ok, 12} = Music.refresh_taste(user)
+    end
+
     test "records rank in list order" do
       user = user_fixture()
 
@@ -258,14 +356,14 @@ defmodule ConcertMatch.MusicTest do
       %{user: user_fixture(), artist: artist_fixture(name: "Radiohead")}
     end
 
-    test "scores a #1 artist at 50", ctx do
+    test "scores a #1 artist at the top of the scale", ctx do
       taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 1)
       assert %{} = scores = Music.affinity_for_user(ctx.user)
-      assert scores[ctx.artist.id] == 50
+      assert scores[ctx.artist.id] == 250
     end
 
-    test "scores a #50 artist at 1", ctx do
-      taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 50)
+    test "scores the last ranked artist at 1", ctx do
+      taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 250)
       assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 1
     end
 
@@ -274,33 +372,45 @@ defmodule ConcertMatch.MusicTest do
       taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 2)
 
       # An artist in all three lists is not three times as loved.
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 49
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 249
     end
 
     test "adds the follow weight on top of a rank", ctx do
       taste_fixture(ctx.user, ctx.artist, source: "top_long", rank: 1)
       taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
 
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 76
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 250 + 126
     end
 
-    test "scores a follow with no ranking", ctx do
+    test "scores a follow mid-table", ctx do
       taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 26
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 126
     end
 
     test "scores library presence lowest, but above nothing", ctx do
       taste_fixture(ctx.user, ctx.artist, source: "library", rank: nil)
-      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 5
+      assert Music.affinity_for_user(ctx.user)[ctx.artist.id] == 25
     end
 
-    test "ranks a deliberate follow above a tail-end top-50 placement", ctx do
+    test "ranks a deliberate follow above a genuinely tail-end placement", ctx do
       other = artist_fixture(name: "Barely Charted")
+      taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
+      taste_fixture(ctx.user, other, source: "top_long", rank: 240)
+
+      scores = Music.affinity_for_user(ctx.user)
+      assert scores[ctx.artist.id] > scores[other.id]
+    end
+
+    # Reading 250 deep rather than 50 changes what "tail end" means. #48 used
+    # to be near the bottom of the list and now sits in the top fifth, so it
+    # outranks a follow -- which is the point of reading deeper.
+    test "a top-50 placement now outranks a bare follow", ctx do
+      other = artist_fixture(name: "Solidly Charted")
       taste_fixture(ctx.user, ctx.artist, source: "followed", rank: nil)
       taste_fixture(ctx.user, other, source: "top_long", rank: 48)
 
       scores = Music.affinity_for_user(ctx.user)
-      assert scores[ctx.artist.id] > scores[other.id]
+      assert scores[other.id] > scores[ctx.artist.id]
     end
   end
 

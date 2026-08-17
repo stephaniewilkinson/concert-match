@@ -2,10 +2,11 @@ defmodule ConcertMatch.Music do
   @moduledoc """
   Artists, who listens to them, and how much.
 
-  The pool is deliberately wide. Matching on bare membership across top-50
-  lists alone would produce silent weeks, and an app that emails you nothing
-  is an app you forget about — so follows and saved library count too, and
-  affinity is used only to order results, never to gate them.
+  The pool is deliberately wide: the top 250 artists in each of Spotify's three
+  time windows, plus everyone you follow, plus your saved library. Matching on
+  bare membership of a short list would produce silent weeks, and an app that
+  emails you nothing is an app you forget about — so affinity is used only to
+  order results, never to gate them.
   """
 
   import Ecto.Query, warn: false
@@ -18,13 +19,20 @@ defmodule ConcertMatch.Music do
   alias ConcertMatch.Repo
   alias ConcertMatch.Spotify.Api
 
-  # Affinity weights. Ranked sources score 51 - rank, so a #1 artist scores 50
-  # and a #50 scores 1. A follow is a deliberate act but carries no ordering,
-  # so it sits mid-table. Library presence is the weakest signal there is --
-  # one saved track from 2014 -- but still counts, because it still counts.
-  @followed_weight 26
-  @library_weight 5
-  @max_rank 50
+  # How deep to read each top-artists window. Spotify pages this 50 at a time,
+  # so 250 is five requests per window; fewer come back if that's all the
+  # affinity data there is.
+  @top_artist_depth 250
+
+  # Affinity weights, all derived from the depth so they stay in proportion if
+  # it changes again. A ranked artist scores `depth + 1 - rank`, so #1 tops the
+  # scale and the last place scores 1. A follow is deliberate but carries no
+  # ordering, so it sits mid-table. Library presence is the weakest signal
+  # there is -- one saved track from 2014 -- but still counts, because it
+  # still counts.
+  @max_rank @top_artist_depth
+  @followed_weight div(@top_artist_depth, 2) + 1
+  @library_weight div(@top_artist_depth, 10)
 
   # Ecto's default is 15 seconds. Generous here because the alternative failure
   # mode -- a timeout part way through, then an Oban retry that redoes every
@@ -83,7 +91,7 @@ defmodule ConcertMatch.Music do
     Enum.reduce_while(@time_range_sources, {:ok, []}, fn {time_range, source}, {:ok, acc} ->
       on_progress.({:top_artists, time_range})
 
-      case Api.top_artists(token, time_range) do
+      case Api.top_artists(token, time_range, @top_artist_depth) do
         {:ok, artists} ->
           ranked = artists |> Enum.with_index(1) |> Enum.map(fn {a, i} -> {a, source, i} end)
           {:cont, {:ok, acc ++ ranked}}
@@ -121,7 +129,7 @@ defmodule ConcertMatch.Music do
           refreshed_at: now
         }
       end)
-      # A user can follow an artist who is also in their top 50; one row per
+      # A user can follow an artist who is also in their top 250; one row per
       # (user, artist, source) is the contract the unique index enforces.
       |> Enum.uniq_by(&{&1.user_id, &1.artist_id, &1.source})
 
@@ -192,9 +200,9 @@ defmodule ConcertMatch.Music do
   Affinity for every (user, artist) pair, as a map keyed by `{user_id,
   artist_id}`.
 
-  Ranked sources contribute `51 - rank`; only the best rank across the three
-  time ranges counts, so an artist in all three isn't triple-weighted. Follows
-  and library presence add their flat weights on top.
+  Ranked sources contribute `depth + 1 - rank`; only the best rank across the
+  three time ranges counts, so an artist in all three isn't triple-weighted.
+  Follows and library presence add their flat weights on top.
   """
   @spec affinity_scores() :: %{{integer(), integer()} => integer()}
   def affinity_scores do

@@ -143,7 +143,7 @@ defmodule ConcertMatch.EventsTest do
 
       # Best-of rather than sum, so a festival bill of also-rans can't
       # outrank a show by someone's actual favourite band.
-      assert score == 50
+      assert score == 250
     end
 
     test "handles an empty list" do
@@ -175,7 +175,8 @@ defmodule ConcertMatch.EventsTest do
 
       assert event.id == ctx.event.id
       assert length(users) == 2
-      assert score == 50 + 49
+      # Summed across the two people: a #1 and a #2 placement.
+      assert score == 250 + 249
     end
 
     # This is the requirement stated outright: match wide, rank by affinity.

@@ -3,10 +3,14 @@
 Find concerts you and your friends both want to go to, and get an email when
 one is announced.
 
-Concert Match reads your Spotify listening — top artists, follows, saved
-library — and does the same for a handful of friends. When a show near you
-features an artist that two or more of you care about, everyone who matches
-gets a note saying who else is in.
+Concert Match reads your Spotify listening — your top 250 artists in each of
+three time windows, everyone you follow, and your saved library — and does the
+same for a handful of friends. When a show near you features an artist that two
+or more of you care about, everyone who matches gets a note saying who else is
+in.
+
+Matching is deliberately wide: any overlap counts. Affinity only decides the
+order things appear in, never whether they appear at all.
 
 Mail is sent when there's something to say, not on a schedule. A show that
 matches only you appears on the home page but doesn't earn an email; a quiet
