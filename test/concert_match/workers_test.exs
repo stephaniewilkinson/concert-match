@@ -53,6 +53,50 @@ defmodule ConcertMatch.WorkersTest do
       assert {:error, _} = perform_job(RefreshTasteWorker, %{user_id: user.id})
     end
 
+    test "a finished import can be run again straight away" do
+      user = user_fixture()
+
+      {:ok, :queued} = RefreshTasteWorker.enqueue(user.id)
+      assert [job] = all_enqueued(worker: RefreshTasteWorker)
+
+      # Uniqueness is scoped to incomplete states, so finishing releases the
+      # lock. Were it scoped by period alone, re-importing would be refused
+      # for five minutes with no way to tell why.
+      Repo.update_all(
+        from(j in Oban.Job, where: j.id == ^job.id),
+        set: [state: "completed", completed_at: DateTime.utc_now()]
+      )
+
+      refute RefreshTasteWorker.in_progress?(user.id)
+
+      {:ok, :queued} = RefreshTasteWorker.enqueue(user.id)
+
+      assert Repo.aggregate(
+               from(j in Oban.Job, where: j.state == "available"),
+               :count
+             ) == 1
+    end
+
+    test "a second request while one is running does not queue twice" do
+      user = user_fixture()
+
+      {:ok, :queued} = RefreshTasteWorker.enqueue(user.id)
+      {:ok, :queued} = RefreshTasteWorker.enqueue(user.id)
+
+      assert length(all_enqueued(worker: RefreshTasteWorker)) == 1
+      assert RefreshTasteWorker.in_progress?(user.id)
+    end
+
+    test "one user's import doesn't block another's" do
+      mine = user_fixture()
+      yours = user_fixture()
+
+      {:ok, :queued} = RefreshTasteWorker.enqueue(mine.id)
+      {:ok, :queued} = RefreshTasteWorker.enqueue(yours.id)
+
+      assert length(all_enqueued(worker: RefreshTasteWorker)) == 2
+    end
+
     test "an empty-args run fans out one job per user" do
       user_fixture()
       user_fixture()
