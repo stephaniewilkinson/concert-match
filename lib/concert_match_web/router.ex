@@ -40,6 +40,7 @@ defmodule ConcertMatchWeb.Router do
       on_mount: [{ConcertMatchWeb.UserAuth, :ensure_authenticated}] do
       live "/home", HomeLive
       live "/settings", SettingsLive
+      live "/data", DataLive
     end
   end
 

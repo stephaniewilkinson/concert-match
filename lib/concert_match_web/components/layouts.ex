@@ -41,6 +41,9 @@ defmodule ConcertMatchWeb.Layouts do
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
           <li :if={@current_user}>
+            <.link navigate={~p"/data"} class="btn btn-ghost">Your data</.link>
+          </li>
+          <li :if={@current_user}>
             <.link navigate={~p"/settings"} class="btn btn-ghost">Settings</.link>
           </li>
           <li>

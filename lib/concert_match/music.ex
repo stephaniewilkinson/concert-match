@@ -256,6 +256,103 @@ defmodule ConcertMatch.Music do
     |> Enum.group_by(fn {name, _} -> name end, fn {_, id} -> id end)
   end
 
+  @doc """
+  One row per artist in a user's pool, with every reason they're in it.
+
+  Collapses the per-source rows into something a person can read: the artist,
+  which sources vouched for them, their best rank, and the resulting affinity.
+  Sorted strongest first.
+
+  Scoring happens in Elixir rather than SQL because the weights live here and
+  a pool is a few thousand rows at most — five users, not five million. If that
+  stops being true this wants to become a query.
+  """
+  @spec taste_for_user(User.t() | integer(), keyword()) :: [map()]
+  def taste_for_user(user, opts \\ [])
+  def taste_for_user(%User{id: id}, opts), do: taste_for_user(id, opts)
+
+  def taste_for_user(user_id, opts) when is_integer(user_id) do
+    search = opts |> Keyword.get(:search, "") |> String.trim() |> String.downcase()
+    source_filter = Keyword.get(opts, :source)
+
+    from(ua in UserArtist,
+      join: a in Artist,
+      on: a.id == ua.artist_id,
+      where: ua.user_id == ^user_id,
+      select: {a, ua.source, ua.rank, ua.refreshed_at}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {artist, _, _, _} -> artist.id end)
+    |> Enum.map(fn {_id, rows} ->
+      {artist, _, _, refreshed_at} = hd(rows)
+      sources = rows |> Enum.map(fn {_, source, _, _} -> source end) |> Enum.sort()
+
+      ranks =
+        rows
+        |> Enum.filter(fn {_, _, rank, _} -> is_integer(rank) end)
+        |> Map.new(fn {_, source, rank, _} -> {source, rank} end)
+
+      %{
+        artist: artist,
+        sources: sources,
+        ranks: ranks,
+        best_rank: ranks |> Map.values() |> Enum.min(fn -> nil end),
+        score: score_rows(Enum.map(rows, fn {_, s, r, _} -> {user_id, artist.id, s, r} end)),
+        refreshed_at: refreshed_at
+      }
+    end)
+    |> filter_taste(search, source_filter)
+    |> Enum.sort_by(& &1.score, :desc)
+  end
+
+  defp filter_taste(rows, search, source_filter) do
+    rows
+    |> then(fn rows ->
+      if search == "" do
+        rows
+      else
+        Enum.filter(rows, &String.contains?(String.downcase(&1.artist.name), search))
+      end
+    end)
+    |> then(fn rows ->
+      if source_filter in [nil, "all"] do
+        rows
+      else
+        Enum.filter(rows, &(source_filter in &1.sources))
+      end
+    end)
+  end
+
+  @doc """
+  Counts by source and when the pool was last written, for a summary line.
+  """
+  @spec taste_summary(User.t() | integer()) :: map()
+  def taste_summary(%User{id: id}), do: taste_summary(id)
+
+  def taste_summary(user_id) when is_integer(user_id) do
+    rows =
+      Repo.all(
+        from ua in UserArtist,
+          where: ua.user_id == ^user_id,
+          select: {ua.source, ua.refreshed_at}
+      )
+
+    %{
+      total_rows: length(rows),
+      by_source: rows |> Enum.frequencies_by(fn {source, _} -> source end),
+      distinct_artists:
+        Repo.one(
+          from ua in UserArtist,
+            where: ua.user_id == ^user_id,
+            select: count(ua.artist_id, :distinct)
+        ),
+      last_imported_at:
+        rows
+        |> Enum.map(fn {_, refreshed_at} -> refreshed_at end)
+        |> Enum.max(DateTime, fn -> nil end)
+    }
+  end
+
   def list_artists, do: Repo.all(Artist)
 
   def get_artist_by_spotify_id(spotify_id), do: Repo.get_by(Artist, spotify_id: spotify_id)

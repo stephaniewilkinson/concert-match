@@ -134,4 +134,18 @@ defmodule ConcertMatch.Notifications do
   def list_notifications(%User{id: user_id}) do
     Repo.all(from n in Notification, where: n.user_id == ^user_id)
   end
+
+  @doc """
+  What this user has been emailed about, most recent first, with the show.
+  """
+  def sent_history(%User{id: user_id}) do
+    Repo.all(
+      from n in Notification,
+        join: e in Events.Event,
+        on: e.id == n.event_id,
+        where: n.user_id == ^user_id,
+        order_by: [desc: n.sent_at],
+        select: %{sent_at: n.sent_at, event: e}
+    )
+  end
 end
