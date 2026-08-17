@@ -97,13 +97,80 @@ defmodule ConcertMatchWeb.SettingsLiveTest do
   end
 
   describe "location" do
-    test "asks for a ZIP code, not coordinates", %{conn: conn} do
+    test "asks for a postal code, not coordinates", %{conn: conn} do
       {:ok, _live, html} = live(conn, ~p"/settings")
 
-      assert html =~ "ZIP code"
+      assert html =~ "Postal code"
       # Nobody knows their own latitude.
       refute html =~ "Latitude"
       refute html =~ "Longitude"
+    end
+
+    test "offers a country selector defaulting to the US", %{conn: conn} do
+      {:ok, _live, html} = live(conn, ~p"/settings")
+
+      assert html =~ "Country"
+      assert html =~ "United States"
+      assert html =~ "United Kingdom"
+      # Ireland answers 404 even for valid Eircodes, so it isn't offered --
+      # a country the lookup can't resolve is worse than one that's absent.
+      refute html =~ ~s(value="ie")
+    end
+
+    test "saves a non-US country and looks it up there", %{conn: conn, user: user} do
+      test_pid = self()
+
+      Req.Test.stub(Zippopotam, fn conn ->
+        send(test_pid, {:requested, conn.request_path})
+
+        Req.Test.json(conn, %{
+          "places" => [
+            %{
+              "place name" => "London",
+              "state" => "England",
+              "latitude" => "51.5074",
+              "longitude" => "-0.1278"
+            }
+          ]
+        })
+      end)
+
+      {:ok, live, _html} = live(conn, ~p"/settings")
+
+      live
+      |> form("form", user: %{country: "gb", postal_code: "SW1A"})
+      |> render_submit()
+
+      assert_received {:requested, "/gb/SW1A"}
+
+      reloaded = Accounts.get_user!(user.id)
+      assert reloaded.country == "gb"
+      assert reloaded.postal_place == "London, England"
+    end
+
+    # The same postal code means somewhere else entirely in another country,
+    # so changing only the country still has to be re-resolved.
+    test "changing only the country re-geocodes", %{conn: conn, user: user} do
+      stub_place("Portland", "Oregon", 45.5231, -122.6765)
+      {:ok, live, _html} = live(conn, ~p"/settings")
+      live |> form("form", user: %{country: "us", postal_code: "97214"}) |> render_submit()
+
+      stub_place("Somewhere", "Elsewhere", 10.0, 20.0)
+      live |> form("form", user: %{country: "de"}) |> render_submit()
+
+      reloaded = Accounts.get_user!(user.id)
+      assert reloaded.country == "de"
+      assert_in_delta reloaded.home_lat, 10.0, 0.0001
+    end
+
+    test "rejects a country the geocoder can't resolve", %{conn: conn} do
+      {:ok, live, _html} = live(conn, ~p"/settings")
+
+      html =
+        live
+        |> render_change("validate", %{"user" => %{"country" => "ie", "postal_code" => "D02"}})
+
+      assert html =~ "isn&#39;t somewhere we can look up postal codes"
     end
 
     test "saves a ZIP and geocodes it to coordinates", %{conn: conn, user: user} do

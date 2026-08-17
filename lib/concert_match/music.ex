@@ -36,21 +36,36 @@ defmodule ConcertMatch.Music do
   Pull everything Spotify will tell us about one user's taste and store it.
 
   Returns the number of `user_artists` rows written.
+
+  ## Options
+
+    * `:on_progress` — a one-argument function called as each stage starts and
+      as library pages arrive. An import crosses five Spotify endpoints and can
+      page through thousands of saved tracks, so a caller that shows a spinner
+      and nothing else leaves people wondering whether it has hung.
+
+  Progress messages are structured rather than pre-worded, so the wording stays
+  in whatever is displaying them.
   """
-  @spec refresh_taste(User.t()) :: {:ok, non_neg_integer()} | {:error, term()}
-  def refresh_taste(%User{} = user) do
+  @spec refresh_taste(User.t(), keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def refresh_taste(%User{} = user, opts \\ []) do
+    on_progress = Keyword.get(opts, :on_progress, fn _ -> :ok end)
+
     with {:ok, token, user} <- Accounts.fresh_access_token(user),
-         {:ok, entries} <- collect_taste(token) do
+         {:ok, entries} <- collect_taste(token, on_progress) do
+      on_progress.({:saving, length(entries)})
       write_taste(user, entries)
     end
   end
 
   # Each source contributes {spotify_artist, source, rank}. Failures on any one
   # source abort the refresh rather than silently narrowing someone's pool.
-  defp collect_taste(token) do
-    with {:ok, top} <- collect_top_artists(token),
+  defp collect_taste(token, on_progress) do
+    with {:ok, top} <- collect_top_artists(token, on_progress),
+         on_progress.({:following, nil}),
          {:ok, followed} <- Api.followed_artists(token),
-         {:ok, library} <- Api.library_artists(token) do
+         on_progress.({:library, 0}),
+         {:ok, library} <- Api.library_artists(token, on_progress) do
       entries =
         top ++
           Enum.map(followed, &{&1, "followed", nil}) ++
@@ -60,8 +75,10 @@ defmodule ConcertMatch.Music do
     end
   end
 
-  defp collect_top_artists(token) do
+  defp collect_top_artists(token, on_progress) do
     Enum.reduce_while(@time_range_sources, {:ok, []}, fn {time_range, source}, {:ok, acc} ->
+      on_progress.({:top_artists, time_range})
+
       case Api.top_artists(token, time_range) do
         {:ok, artists} ->
           ranked = artists |> Enum.with_index(1) |> Enum.map(fn {a, i} -> {a, source, i} end)

@@ -27,6 +27,7 @@ defmodule ConcertMatch.Accounts.User do
     # geocoding on save; the event sweep and any future map work in those.
     field :postal_code, :string
     field :postal_place, :string
+    field :country, :string, default: "us"
 
     field :home_lat, :float
     field :home_lng, :float
@@ -105,12 +106,16 @@ defmodule ConcertMatch.Accounts.User do
       :email,
       :postal_code,
       :postal_place,
+      :country,
       :home_lat,
       :home_lng,
       :radius_miles,
       :notify_enabled
     ])
     |> normalize_postal_code()
+    |> validate_inclusion(:country, ConcertMatch.Geocoding.country_codes(),
+      message: "isn't somewhere we can look up postal codes"
+    )
     |> validate_number(:home_lat, greater_than_or_equal_to: -90, less_than_or_equal_to: 90)
     |> validate_number(:home_lng, greater_than_or_equal_to: -180, less_than_or_equal_to: 180)
     |> validate_number(:radius_miles, greater_than: 0, less_than_or_equal_to: 500)

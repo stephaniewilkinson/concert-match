@@ -22,6 +22,7 @@ defmodule ConcertMatchWeb.HomeLive do
      socket
      |> assign(page_title: "Your matches")
      |> assign(importing?: RefreshTasteWorker.in_progress?(user.id))
+     |> assign(progress: nil)
      |> assign(names: display_names())
      |> load_matches()}
   end
@@ -30,7 +31,7 @@ defmodule ConcertMatchWeb.HomeLive do
   def handle_event("import_music", _params, socket) do
     case RefreshTasteWorker.enqueue(socket.assigns.current_user.id) do
       {:ok, :queued} ->
-        {:noreply, assign(socket, importing?: true)}
+        {:noreply, assign(socket, importing?: true, progress: "Asking Spotify…")}
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Couldn't start the import. Try again in a moment.")}
@@ -38,10 +39,16 @@ defmodule ConcertMatchWeb.HomeLive do
   end
 
   @impl true
+  def handle_info({:taste_progress, stage}, socket) do
+    # Arrives even if the import was started elsewhere -- another tab, or the
+    # nightly run -- so the page narrates work it didn't itself begin.
+    {:noreply, assign(socket, importing?: true, progress: describe(stage))}
+  end
+
   def handle_info({:taste_refreshed, count}, socket) do
     {:noreply,
      socket
-     |> assign(importing?: false)
+     |> assign(importing?: false, progress: nil)
      |> load_matches()
      |> put_flash(:info, "Imported #{count} #{pluralize(count, "artist")} from Spotify.")}
   end
@@ -49,16 +56,32 @@ defmodule ConcertMatchWeb.HomeLive do
   def handle_info({:taste_failed, :no_refresh_token}, socket) do
     {:noreply,
      socket
-     |> assign(importing?: false)
+     |> assign(importing?: false, progress: nil)
      |> put_flash(:error, "Spotify needs you to log in again. Log out and back in.")}
   end
 
   def handle_info({:taste_failed, _reason}, socket) do
     {:noreply,
      socket
-     |> assign(importing?: false)
+     |> assign(importing?: false, progress: nil)
      |> put_flash(:error, "Spotify wouldn't answer. It'll retry on its own shortly.")}
   end
+
+  # The worker reports stages structurally; the wording belongs here.
+  defp describe({:top_artists, "short_term"}), do: "Reading what you've had on lately…"
+  defp describe({:top_artists, "medium_term"}), do: "Reading the last few months…"
+  defp describe({:top_artists, "long_term"}), do: "Reading what you've played for years…"
+  defp describe({:following, _}), do: "Reading the artists you follow…"
+
+  defp describe({:library, 0}), do: "Reading your saved library…"
+
+  defp describe({:library, count}),
+    do: "Reading your saved library — #{count} #{pluralize(count, "artist")} so far…"
+
+  defp describe({:saving, count}),
+    do: "Saving #{count} #{pluralize(count, "entry")}…"
+
+  defp describe(_), do: "Working…"
 
   defp load_matches(socket) do
     user = socket.assigns.current_user
@@ -75,6 +98,7 @@ defmodule ConcertMatchWeb.HomeLive do
   end
 
   defp pluralize(1, word), do: word
+  defp pluralize(_, "entry"), do: "entries"
   defp pluralize(_, word), do: word <> "s"
 
   @impl true
@@ -102,6 +126,8 @@ defmodule ConcertMatchWeb.HomeLive do
           </div>
           <.import_button :if={@artists != []} importing?={@importing?} class="btn-ghost btn-sm" />
         </header>
+
+        <.progress_line :if={@importing? and @artists != []} progress={@progress} />
 
         <section :if={@shared != []} class="space-y-4">
           <h2 class="text-lg font-semibold">You and your friends</h2>
@@ -133,6 +159,7 @@ defmodule ConcertMatchWeb.HomeLive do
                 it'll keep going.
               </p>
             </div>
+            <.progress_line :if={@importing?} progress={@progress} />
             <.import_button importing?={@importing?} class="btn-primary" />
           </div>
         </section>
@@ -156,6 +183,17 @@ defmodule ConcertMatchWeb.HomeLive do
         </section>
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :progress, :string, default: nil
+
+  defp progress_line(assigns) do
+    ~H"""
+    <div class="flex items-center gap-3 text-sm opacity-70" aria-live="polite">
+      <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+      <span>{@progress || "Working…"}</span>
+    </div>
     """
   end
 

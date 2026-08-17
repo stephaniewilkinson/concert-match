@@ -47,47 +47,58 @@ defmodule ConcertMatch.Spotify.Api do
 
   @doc """
   Distinct artists across the user's saved tracks and saved albums.
+
+  `on_progress` is called with `{:library, count_so_far}` as each page lands.
+  This is the slow part of an import — a decade of saved tracks is dozens of
+  round trips — so it's the part worth reporting on.
   """
-  @spec library_artists(String.t()) :: {:ok, [map()]} | {:error, term()}
-  def library_artists(access_token) do
-    with {:ok, track_artists} <- saved_tracks_artists(access_token),
-         {:ok, album_artists} <- saved_albums_artists(access_token) do
+  @spec library_artists(String.t(), (term() -> any())) :: {:ok, [map()]} | {:error, term()}
+  def library_artists(access_token, on_progress \\ fn _ -> :ok end) do
+    with {:ok, track_artists} <- saved_tracks_artists(access_token, on_progress),
+         {:ok, album_artists} <- saved_albums_artists(access_token, on_progress) do
       {:ok, dedupe(track_artists ++ album_artists)}
     end
   end
 
-  defp saved_tracks_artists(access_token) do
-    paginate(access_token, "/me/tracks", fn item ->
-      get_in(item, ["track", "artists"]) || []
-    end)
+  defp saved_tracks_artists(access_token, on_progress) do
+    paginate(
+      access_token,
+      "/me/tracks",
+      fn item -> get_in(item, ["track", "artists"]) || [] end,
+      on_progress
+    )
   end
 
-  defp saved_albums_artists(access_token) do
-    paginate(access_token, "/me/albums", fn item ->
-      get_in(item, ["album", "artists"]) || []
-    end)
+  defp saved_albums_artists(access_token, on_progress) do
+    paginate(
+      access_token,
+      "/me/albums",
+      fn item -> get_in(item, ["album", "artists"]) || [] end,
+      on_progress
+    )
   end
 
   # Offset pagination over a saved-items endpoint, extracting artists per item.
-  defp paginate(access_token, path, extract, offset \\ 0, acc \\ [], page \\ 0)
+  defp paginate(access_token, path, extract, on_progress, offset \\ 0, acc \\ [], page \\ 0)
 
-  defp paginate(_access_token, _path, _extract, _offset, acc, page)
+  defp paginate(_access_token, _path, _extract, _on_progress, _offset, acc, page)
        when page >= @max_library_pages do
     {:ok, dedupe(acc)}
   end
 
-  defp paginate(access_token, path, extract, offset, acc, page) do
+  defp paginate(access_token, path, extract, on_progress, offset, acc, page) do
     case get(access_token, path, limit: @page_size, offset: offset) do
       {:ok, %{"items" => []}} ->
         {:ok, dedupe(acc)}
 
       {:ok, %{"items" => items} = body} ->
         acc = acc ++ Enum.flat_map(items, extract)
+        on_progress.({:library, length(dedupe(acc))})
 
         if is_nil(body["next"]) do
           {:ok, dedupe(acc)}
         else
-          paginate(access_token, path, extract, offset + @page_size, acc, page + 1)
+          paginate(access_token, path, extract, on_progress, offset + @page_size, acc, page + 1)
         end
 
       {:ok, _} ->

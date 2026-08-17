@@ -80,7 +80,9 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
         :ok
 
       user ->
-        case Music.refresh_taste(user) do
+        on_progress = fn stage -> broadcast(user_id, {:taste_progress, stage}) end
+
+        case Music.refresh_taste(user, on_progress: on_progress) do
           {:ok, count} ->
             # A new person's first import can turn shows already in the
             # database into shared matches, so re-check rather than waiting

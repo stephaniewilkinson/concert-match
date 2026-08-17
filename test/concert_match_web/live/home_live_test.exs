@@ -8,6 +8,15 @@ defmodule ConcertMatchWeb.HomeLiveTest do
 
   alias ConcertMatch.Workers.RefreshTasteWorker
 
+  # Stands in for the worker, which broadcasts on this topic as it goes.
+  defp broadcast(user, message) do
+    Phoenix.PubSub.broadcast(
+      ConcertMatch.PubSub,
+      RefreshTasteWorker.topic(user.id),
+      message
+    )
+  end
+
   setup %{conn: conn} do
     user = user_fixture(%{display_name: "Steph"})
     artist = artist_fixture(name: "Radiohead")
@@ -66,6 +75,67 @@ defmodule ConcertMatchWeb.HomeLiveTest do
       # Read from Oban rather than remembered in the socket, so a refresh
       # mid-import doesn't offer a button that would do nothing.
       assert html =~ "Importing"
+    end
+
+    test "narrates each stage as the import runs", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      stages = [
+        {{:top_artists, "short_term"}, "had on lately"},
+        {{:top_artists, "long_term"}, "played for years"},
+        {{:following, nil}, "artists you follow"},
+        {{:library, 0}, "Reading your saved library"},
+        {{:saving, 340}, "Saving 340 entries"}
+      ]
+
+      for {stage, expected} <- stages do
+        broadcast(user, {:taste_progress, stage})
+        assert render(live) =~ expected
+      end
+    end
+
+    test "counts library artists as they arrive", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      broadcast(user, {:taste_progress, {:library, 1}})
+      assert render(live) =~ "1 artist so far"
+
+      broadcast(user, {:taste_progress, {:library, 1250}})
+      assert render(live) =~ "1250 artists so far"
+    end
+
+    # An import started in another tab, or by the nightly run, should still
+    # show up here rather than leaving the page looking idle.
+    test "narrates an import this page didn't start", %{conn: conn, user: user} do
+      {:ok, live, html} = live(conn, ~p"/home")
+      refute html =~ "Reading"
+
+      broadcast(user, {:taste_progress, {:following, nil}})
+
+      html = render(live)
+      assert html =~ "artists you follow"
+      assert html =~ "Importing"
+    end
+
+    test "clears the progress line when the import finishes", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      broadcast(user, {:taste_progress, {:library, 40}})
+      assert render(live) =~ "Reading your saved library"
+
+      broadcast(user, {:taste_refreshed, 40})
+      refute render(live) =~ "Reading your saved library"
+    end
+
+    test "clears the progress line when the import fails", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      broadcast(user, {:taste_progress, {:library, 40}})
+      broadcast(user, {:taste_failed, :timeout})
+
+      html = render(live)
+      refute html =~ "Reading your saved library"
+      assert html =~ "Import my music"
     end
 
     test "updates the page when the import finishes", %{conn: conn, user: user, artist: artist} do

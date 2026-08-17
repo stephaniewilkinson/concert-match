@@ -9,6 +9,7 @@ defmodule ConcertMatchWeb.SettingsLive do
   use ConcertMatchWeb, :live_view
 
   alias ConcertMatch.Accounts
+  alias ConcertMatch.Geocoding
 
   @impl true
   def mount(_params, _session, socket) do
@@ -80,8 +81,14 @@ defmodule ConcertMatchWeb.SettingsLive do
           <fieldset class="space-y-2">
             <legend class="font-semibold">Where you're looking for shows</legend>
 
-            <div class="grid grid-cols-2 gap-4">
-              <.input field={@form[:postal_code]} type="text" label="ZIP code" />
+            <div class="grid grid-cols-3 gap-4">
+              <.input
+                field={@form[:country]}
+                type="select"
+                label="Country"
+                options={Geocoding.countries()}
+              />
+              <.input field={@form[:postal_code]} type="text" label="Postal code" />
               <.input field={@form[:radius_miles]} type="number" label="Within (miles)" />
             </div>
 

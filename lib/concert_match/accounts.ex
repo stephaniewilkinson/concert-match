@@ -96,12 +96,13 @@ defmodule ConcertMatch.Accounts do
   end
 
   @doc """
-  Save settings, geocoding the postal code if it changed.
+  Save settings, geocoding the location if it changed.
 
   The lookup happens here rather than in the changeset because it's a network
   call, and a changeset that reaches out to the internet is a changeset you
   can't reason about or test in isolation. Coordinates are only touched when
-  the postal code actually changes, so saving an email doesn't re-geocode.
+  the postal code or country actually changes, so saving an email doesn't
+  re-geocode.
   """
   def update_settings(%User{} = user, attrs) do
     changeset = User.settings_changeset(user, attrs)
@@ -112,13 +113,26 @@ defmodule ConcertMatch.Accounts do
     end
   end
 
+  # Re-resolves when either half of the location changes. The same postal code
+  # means somewhere entirely different in another country, so a country change
+  # alone still has to be looked up again.
   defp resolve_postal_code(changeset) do
-    case Ecto.Changeset.get_change(changeset, :postal_code) do
-      nil ->
+    changed? =
+      Ecto.Changeset.changed?(changeset, :postal_code) or
+        Ecto.Changeset.changed?(changeset, :country)
+
+    code = Ecto.Changeset.get_field(changeset, :postal_code)
+    country = Ecto.Changeset.get_field(changeset, :country) || "us"
+
+    cond do
+      not changed? ->
         {:ok, changeset}
 
-      code ->
-        case Geocoding.lookup(code) do
+      is_nil(code) ->
+        {:ok, changeset}
+
+      true ->
+        case Geocoding.lookup(code, country) do
           {:ok, place} ->
             {:ok,
              changeset
