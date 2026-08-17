@@ -8,24 +8,74 @@ defmodule ConcertMatchWeb.HomeLive do
   alias ConcertMatch.Accounts
   alias ConcertMatch.Events
   alias ConcertMatch.Music
+  alias ConcertMatch.Workers.RefreshTasteWorker
 
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
-    matches = Events.matches_for_user(user.id)
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ConcertMatch.PubSub, RefreshTasteWorker.topic(user.id))
+    end
 
     {:ok,
      socket
      |> assign(page_title: "Your matches")
-     |> assign(shared: matches.shared, solo: matches.solo)
+     |> assign(importing?: RefreshTasteWorker.in_progress?(user.id))
      |> assign(names: display_names())
-     |> assign(artists: Music.top_artists_for_user(user, 12))}
+     |> load_matches()}
+  end
+
+  @impl true
+  def handle_event("import_music", _params, socket) do
+    case RefreshTasteWorker.enqueue(socket.assigns.current_user.id) do
+      {:ok, :queued} ->
+        {:noreply, assign(socket, importing?: true)}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Couldn't start the import. Try again in a moment.")}
+    end
+  end
+
+  @impl true
+  def handle_info({:taste_refreshed, count}, socket) do
+    {:noreply,
+     socket
+     |> assign(importing?: false)
+     |> load_matches()
+     |> put_flash(:info, "Imported #{count} #{pluralize(count, "artist")} from Spotify.")}
+  end
+
+  def handle_info({:taste_failed, :no_refresh_token}, socket) do
+    {:noreply,
+     socket
+     |> assign(importing?: false)
+     |> put_flash(:error, "Spotify needs you to log in again. Log out and back in.")}
+  end
+
+  def handle_info({:taste_failed, _reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(importing?: false)
+     |> put_flash(:error, "Spotify wouldn't answer. It'll retry on its own shortly.")}
+  end
+
+  defp load_matches(socket) do
+    user = socket.assigns.current_user
+    matches = Events.matches_for_user(user.id)
+
+    socket
+    |> assign(shared: matches.shared, solo: matches.solo)
+    |> assign(artists: Music.top_artists_for_user(user, 12))
   end
 
   # Five users at most, so loading every name is cheaper than joining.
   defp display_names do
     Accounts.list_users() |> Map.new(&{&1.id, &1.display_name || "Someone"})
   end
+
+  defp pluralize(1, word), do: word
+  defp pluralize(_, word), do: word <> "s"
 
   @impl true
   def render(assigns) do
@@ -39,7 +89,7 @@ defmodule ConcertMatchWeb.HomeLive do
             alt=""
             class="size-14 rounded-full"
           />
-          <div>
+          <div class="flex-1">
             <h1 class="text-2xl font-bold">
               {@current_user.display_name || "Your matches"}
             </h1>
@@ -47,12 +97,10 @@ defmodule ConcertMatchWeb.HomeLive do
               Within {@current_user.radius_miles} miles of home
             </p>
             <p :if={is_nil(@current_user.home_lat)} class="text-sm opacity-60">
-              <.link navigate={~p"/settings"} class="link">
-                Set your location
-              </.link>
-              to start matching
+              <.link navigate={~p"/settings"} class="link">Set your location</.link> to start matching
             </p>
           </div>
+          <.import_button :if={@artists != []} importing?={@importing?} class="btn-ghost btn-sm" />
         </header>
 
         <section :if={@shared != []} class="space-y-4">
@@ -71,13 +119,27 @@ defmodule ConcertMatchWeb.HomeLive do
           </ul>
         </section>
 
-        <section :if={@shared == [] and @solo == []} class="card bg-base-200">
+        <section :if={@artists == []} class="card bg-base-200">
+          <div class="card-body items-start gap-4">
+            <div>
+              <h2 class="card-title">Import your listening</h2>
+              <p class="opacity-80">
+                Concert Match needs to know what you listen to before it can match you
+                with anyone. This reads your top artists, the artists you follow, and
+                your saved library from Spotify.
+              </p>
+              <p :if={@importing?} class="mt-2 text-sm opacity-60">
+                This can take a minute if your library is large. You can leave the page;
+                it'll keep going.
+              </p>
+            </div>
+            <.import_button importing?={@importing?} class="btn-primary" />
+          </div>
+        </section>
+
+        <section :if={@artists != [] and @shared == [] and @solo == []} class="card bg-base-200">
           <div class="card-body">
-            <p :if={@artists == []}>
-              Your listening hasn't been imported yet. It runs overnight, or you can
-              trigger it by hand with <code class="text-sm">ConcertMatch.Music.refresh_taste/1</code>.
-            </p>
-            <p :if={@artists != []}>
+            <p>
               Nothing upcoming matches you yet. Concert Match checks nightly and will
               email you when something turns up.
             </p>
@@ -94,6 +156,23 @@ defmodule ConcertMatchWeb.HomeLive do
         </section>
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :importing?, :boolean, required: true
+  attr :class, :string, default: ""
+
+  defp import_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="import_music"
+      phx-disable-with="Importing…"
+      disabled={@importing?}
+      class={["btn", @class]}
+    >
+      {if @importing?, do: "Importing…", else: "Import my music"}
+    </button>
     """
   end
 

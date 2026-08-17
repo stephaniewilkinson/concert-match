@@ -28,6 +28,10 @@ defmodule ConcertMatch.Accounts do
   of this app called `user.save()` without returning and fell through to
   `new User(...)`, minting a duplicate on every re-login; that shape is not
   expressible here, and a unique index backs it up.
+
+  A first login seeds the email from Spotify. Later logins refresh credentials
+  and profile details but leave the email alone, since by then it may have been
+  changed in settings.
   """
   def upsert_from_spotify(profile, tokens) do
     attrs = %{
@@ -42,7 +46,7 @@ defmodule ConcertMatch.Accounts do
 
     case get_user_by_spotify_id(profile["id"]) do
       nil -> %User{} |> User.oauth_changeset(attrs) |> Repo.insert()
-      user -> user |> User.oauth_changeset(attrs) |> Repo.update()
+      user -> user |> User.relogin_changeset(attrs) |> Repo.update()
     end
   end
 

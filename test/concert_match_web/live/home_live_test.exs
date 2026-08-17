@@ -1,9 +1,12 @@
 defmodule ConcertMatchWeb.HomeLiveTest do
   use ConcertMatchWeb.ConnCase, async: true
+  use Oban.Testing, repo: ConcertMatch.Repo
 
   import Phoenix.LiveViewTest
   import ConcertMatch.AccountsFixtures
   import ConcertMatch.MusicFixtures
+
+  alias ConcertMatch.Workers.RefreshTasteWorker
 
   setup %{conn: conn} do
     user = user_fixture(%{display_name: "Steph"})
@@ -24,10 +27,80 @@ defmodule ConcertMatchWeb.HomeLiveTest do
     assert html =~ "Set your location"
   end
 
-  test "explains that listening hasn't been imported yet", %{conn: conn} do
-    {:ok, _live, html} = live(conn, ~p"/home")
+  describe "importing music" do
+    test "offers a button rather than an incantation", %{conn: conn} do
+      {:ok, _live, html} = live(conn, ~p"/home")
 
-    assert html =~ "hasn&#39;t been imported yet"
+      assert html =~ "Import your listening"
+      assert html =~ "Import my music"
+
+      # The empty state used to tell people to call an Elixir function, which
+      # nobody can do from a browser.
+      refute html =~ "refresh_taste"
+    end
+
+    test "clicking it queues an import", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      html = live |> element("button", "Import my music") |> render_click()
+
+      assert html =~ "Importing"
+      assert [job] = all_enqueued(worker: RefreshTasteWorker)
+      assert job.args == %{"user_id" => user.id}
+    end
+
+    test "clicking twice does not import twice", %{conn: conn} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      live |> element("button", "Import my music") |> render_click()
+      render_click(live, "import_music", %{})
+
+      assert length(all_enqueued(worker: RefreshTasteWorker)) == 1
+    end
+
+    test "shows the import as running after a page reload", %{conn: conn, user: user} do
+      {:ok, :queued} = RefreshTasteWorker.enqueue(user.id)
+
+      {:ok, _live, html} = live(conn, ~p"/home")
+
+      # Read from Oban rather than remembered in the socket, so a refresh
+      # mid-import doesn't offer a button that would do nothing.
+      assert html =~ "Importing"
+    end
+
+    test "updates the page when the import finishes", %{conn: conn, user: user, artist: artist} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      # Stand in for the worker: taste lands, then it announces itself.
+      taste_fixture(user, artist, rank: 1)
+
+      Phoenix.PubSub.broadcast(
+        ConcertMatch.PubSub,
+        RefreshTasteWorker.topic(user.id),
+        {:taste_refreshed, 1}
+      )
+
+      html = render(live)
+      assert html =~ "Imported 1 artist from Spotify"
+      assert html =~ "Radiohead"
+      refute html =~ "Import your listening"
+    end
+
+    test "reports a failure instead of spinning forever", %{conn: conn, user: user} do
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      live |> element("button", "Import my music") |> render_click()
+
+      Phoenix.PubSub.broadcast(
+        ConcertMatch.PubSub,
+        RefreshTasteWorker.topic(user.id),
+        {:taste_failed, :no_refresh_token}
+      )
+
+      html = render(live)
+      assert html =~ "log in again"
+      assert html =~ "Import my music"
+    end
   end
 
   test "says nothing matches yet once taste exists", %{conn: conn, user: user, artist: artist} do

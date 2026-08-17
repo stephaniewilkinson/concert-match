@@ -65,7 +65,22 @@ defmodule ConcertMatchWeb.SettingsLive do
       <div class="space-y-6">
         <h1 class="text-2xl font-bold">Settings</h1>
 
-        <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-6">
+        <.form
+          for={@form}
+          id="settings-form"
+          phx-change="validate"
+          phx-submit="save"
+          class="space-y-6"
+        >
+          <fieldset class="space-y-2">
+            <legend class="font-semibold">Where to email you</legend>
+            <.input field={@form[:email]} type="email" label="Email address" />
+            <p class="text-sm opacity-60">
+              Taken from your Spotify account to begin with. Changing it here sticks —
+              logging in again won't overwrite it.
+            </p>
+          </fieldset>
+
           <fieldset class="space-y-4">
             <legend class="font-semibold">Where you're looking for shows</legend>
 

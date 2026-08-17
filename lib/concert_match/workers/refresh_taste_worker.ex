@@ -2,18 +2,68 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
   @moduledoc """
   Re-reads one user's Spotify taste.
 
-  Runs nightly per user. Without a stored refresh token this would be
-  impossible — which is why the 2016 app could never have grown a feature
-  like the digest.
+  Runs nightly per user, and on demand when someone presses the import button.
+  Without a stored refresh token this would be impossible — which is why the
+  2016 app could never have grown a feature like the digest.
+
+  Broadcasts its outcome so a watching LiveView can update, since an import
+  crosses several Spotify endpoints and pages the user's whole saved library;
+  it is far too slow to do inside a `handle_event`.
   """
 
-  use Oban.Worker, queue: :spotify, max_attempts: 3
+  # Deduplicated across the states where a job hasn't finished yet, so pressing
+  # the button twice, or pressing it just as the nightly run fires, doesn't
+  # import the same library twice.
+  use Oban.Worker,
+    queue: :spotify,
+    max_attempts: 3,
+    unique: [period: 300, states: :incomplete]
 
   alias ConcertMatch.Accounts
   alias ConcertMatch.Music
   alias ConcertMatch.Notifications
 
   require Logger
+
+  @doc """
+  PubSub topic carrying one user's import progress.
+  """
+  def topic(user_id), do: "taste:#{user_id}"
+
+  @doc """
+  Queue an import for one user.
+
+  Returns `{:ok, :queued}` whether or not this call was the one that created
+  the job — a duplicate means an import is already on its way, which from the
+  caller's point of view is the same outcome.
+  """
+  def enqueue(user_id) do
+    case %{user_id: user_id} |> new() |> Oban.insert() do
+      {:ok, _job} -> {:ok, :queued}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Whether an import for this user is queued or running right now.
+
+  Read from Oban's table rather than tracked in the LiveView, so a page reload
+  mid-import still shows the right thing.
+  """
+  # Same set the uniqueness rule uses, so the button's state and the
+  # deduplication can't disagree about whether an import is under way.
+  @incomplete_states ~w(available scheduled executing retryable suspended)
+
+  def in_progress?(user_id) do
+    import Ecto.Query
+
+    ConcertMatch.Repo.exists?(
+      from j in Oban.Job,
+        where: j.worker == ^Oban.Worker.to_string(__MODULE__),
+        where: j.state in ^@incomplete_states,
+        where: fragment("?->>'user_id' = ?", j.args, ^to_string(user_id))
+    )
+  end
 
   # Cron inserts this with no args; that run fans out one job per user rather
   # than doing the work itself, so a single slow account can't stall the rest.
@@ -42,14 +92,18 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
                 "#{length(queued)} digests queued"
             )
 
+            broadcast(user_id, {:taste_refreshed, count})
             :ok
 
           {:error, :no_refresh_token} ->
             # Nothing a retry can fix; the user has to log in again.
             Logger.warning("user #{user_id} has no refresh token; skipping")
+            broadcast(user_id, {:taste_failed, :no_refresh_token})
             {:cancel, :no_refresh_token}
 
           {:error, reason} ->
+            Logger.error("taste refresh failed for user #{user_id}: #{inspect(reason)}")
+            broadcast(user_id, {:taste_failed, reason})
             {:error, reason}
         end
     end
@@ -59,7 +113,10 @@ defmodule ConcertMatch.Workers.RefreshTasteWorker do
   Enqueue a refresh for every user.
   """
   def enqueue_all do
-    Accounts.list_users()
-    |> Enum.map(&(%{user_id: &1.id} |> new() |> Oban.insert()))
+    Accounts.list_users() |> Enum.map(&enqueue(&1.id))
+  end
+
+  defp broadcast(user_id, message) do
+    Phoenix.PubSub.broadcast(ConcertMatch.PubSub, topic(user_id), message)
   end
 end

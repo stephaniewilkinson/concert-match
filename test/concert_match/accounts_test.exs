@@ -97,6 +97,85 @@ defmodule ConcertMatch.AccountsTest do
     end
   end
 
+  describe "email on re-login" do
+    # Digests are the reason this app exists, so silently reverting a chosen
+    # address on the next login would send someone's mail to an inbox they had
+    # deliberately stopped using.
+    test "a chosen email survives logging in again" do
+      {:ok, user} = Accounts.upsert_from_spotify(spotify_profile(), spotify_tokens())
+      assert user.email == "stevie@example.com"
+
+      {:ok, user} = Accounts.update_settings(user, %{email: "somewhere-i-read@example.com"})
+      assert user.email == "somewhere-i-read@example.com"
+
+      {:ok, after_relogin} =
+        Accounts.upsert_from_spotify(spotify_profile(), spotify_tokens())
+
+      assert after_relogin.email == "somewhere-i-read@example.com"
+    end
+
+    test "logging in again still refreshes credentials and profile" do
+      {:ok, _} = Accounts.upsert_from_spotify(spotify_profile(), spotify_tokens())
+
+      {:ok, user} =
+        Accounts.upsert_from_spotify(
+          spotify_profile(%{"display_name" => "Renamed"}),
+          spotify_tokens(%{"access_token" => "fresher-token"})
+        )
+
+      assert user.display_name == "Renamed"
+      assert user.access_token == "fresher-token"
+    end
+
+    test "the first login still seeds the email from Spotify" do
+      {:ok, user} = Accounts.upsert_from_spotify(spotify_profile(), spotify_tokens())
+      assert user.email == "stevie@example.com"
+    end
+  end
+
+  describe "update_settings/2 email" do
+    test "accepts a new address" do
+      user = user_fixture()
+
+      assert {:ok, updated} = Accounts.update_settings(user, %{email: "new@example.com"})
+      assert updated.email == "new@example.com"
+    end
+
+    test "trims and downcases" do
+      user = user_fixture()
+
+      assert {:ok, updated} = Accounts.update_settings(user, %{email: "  Mixed@Example.COM  "})
+      assert updated.email == "mixed@example.com"
+    end
+
+    test "rejects something that isn't an address" do
+      user = user_fixture()
+
+      assert {:error, changeset} = Accounts.update_settings(user, %{email: "not-an-email"})
+      assert "must look like an email" in errors_on(changeset).email
+    end
+
+    # Asking to be emailed without giving an address can't be honoured, and
+    # the failure would otherwise be silent.
+    test "refuses to leave notifications on with no address" do
+      user = user_fixture()
+
+      assert {:error, changeset} =
+               Accounts.update_settings(user, %{email: "", notify_enabled: true})
+
+      assert "is needed to send you concert emails" in errors_on(changeset).email
+    end
+
+    test "allows clearing the address when notifications are off" do
+      user = user_fixture()
+
+      assert {:ok, updated} =
+               Accounts.update_settings(user, %{email: nil, notify_enabled: false})
+
+      assert is_nil(updated.email)
+    end
+  end
+
   describe "token_valid?/1" do
     test "true while the token is in date" do
       assert Accounts.token_valid?(user_fixture())
